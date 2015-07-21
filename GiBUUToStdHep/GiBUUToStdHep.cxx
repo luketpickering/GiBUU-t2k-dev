@@ -39,6 +39,9 @@ int GiBUUToStdHep(){
   outRooTracker->AddBranches(rooTrackerTree);
 
   int LastEvNum = 0;
+
+  bool isHOREv = false;
+
   while(std::getline(ifs,line)){
     if(!ctr){ctr++;continue;} //skip the table header
     std::istringstream iss(line);
@@ -51,18 +54,18 @@ int GiBUUToStdHep(){
 
     if(EvNum != LastEvNum){
       if(LastEvNum){
+        if(isHOREv && !outRooTracker->GiBUU2NeutCode){
+          std::cout << "[WARN]: Missed a GiBUU reaction code: " << Prodid
+            << std::endl;
+        }
         rooTrackerTree->Fill();
         outRooTracker->Reset();
+        isHOREv = false;
       }
       if(!(EvNum%1000)){ std::cout << "On Ev: " << EvNum << std::endl; }
       if(MaxEntries == EvNum){
         std::cout << "Finishing after " << EvNum << " entries." << std::endl;
         break;
-      }
-      outRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(Prodid);
-      if(Verbosity>=1 && !outRooTracker->GiBUU2NeutCode){
-        std::cout << "[WARN]: Missed a GiBUU reaction code: " << Prodid
-          << std::endl;
       }
 
       outRooTracker->EvtNum = EvNum;
@@ -98,6 +101,25 @@ int GiBUUToStdHep(){
       [GiRooTracker::kStdHepIdxPz] = Mom3;
     outRooTracker->StdHepP4[outRooTracker->StdHepN]\
       [GiRooTracker::kStdHepIdxE] = Mom0;
+
+    outRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(Prodid,
+      outRooTracker->StdHepPdg[outRooTracker->StdHepN]);
+
+    if((Prodid == 32) || (Prodid == 33)){
+      // std::cout << "[INFO]: Is HOR Event." << std::endl;
+      isHOREv = true;
+    }
+
+    if(isHOREv && outRooTracker->GiBUU2NeutCode != 0){
+      // std::cout << "[INFO]: Found the correct NEUT Code: "
+      //   << outRooTracker->GiBUU2NeutCode << std::endl;
+    }
+
+    if(Verbosity>=1 && !outRooTracker->GiBUU2NeutCode){
+      // std::cout << "[WARN]: Missed a GiBUU reaction code: " << Prodid
+      //   << std::endl;
+    }
+
     outRooTracker->StdHepN++;
 
     if(Verbosity && (outRooTracker->StdHepPdg[outRooTracker->StdHepN-1]==0)){

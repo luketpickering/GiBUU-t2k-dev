@@ -48,7 +48,7 @@ void ClearArray2D(T (&arr)[N][M]){
 }
 
 int GiBUUToPDG(int GiBUUCode, double GiBUUCharge);
-int GiBUU2NeutReacCode(int GiBUUCode);
+int GiBUU2NeutReacCode(int GiBUUCode, int PDG);
 
 }
 
