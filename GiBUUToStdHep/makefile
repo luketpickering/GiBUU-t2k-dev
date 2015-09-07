@@ -38,5 +38,13 @@ GiRooTracker.so: GiRooTracker.hxx GiRooTracker.cxx
 GiBUUToStdHep_Utils.so: GiBUUToStdHep_Utils.hxx GiBUUToStdHep_Utils.cxx
 	$(CXX) $(CXXFLAGS) -shared -o $@ GiBUUToStdHep_Utils.cxx
 
+docs: $(TARGETSRC) $(TOBJS) $(TOBJH) dox/GiBUUToStdHep.dox.cfg
+	cd dox; doxygen GiBUUToStdHep.dox.cfg;
+
+latex_docs: docs
+	cd dox/latex; $(MAKE);
+	cp dox/latex/refman.pdf ./GiBUUToStdHep_dox.pdf
+
 clean:
 	rm -rf $(TARGET) GiBUUToStdHep_Utils.so GiRooTracker.so $(LDIR) $(BDIR)
+	rm -rf dox/html dox/latex  GiBUUToStdHep_dox.pdf

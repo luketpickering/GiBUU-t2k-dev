@@ -10,21 +10,46 @@
 
 #include "GiRooTracker.hxx"
 
-namespace {
 
+///Options relevant to the GiBUUToStdHep.exe executable.
+namespace GiBUUToStdHepOpts {
+
+///The location of the input FinalEvents.dat file which was produced by GiBUU.
 std::string InpFName;
 
+///\brief The neutrino species PDG.
+///
+///\note Set by
+///  `GiBUUToStdHep.exe ... -u xx ...'
+/// Required.
 int nuType;
+///\brief The target nuclei nucleon number, A.
+///
+///\note Set by
+///  `GiBUUToStdHep.exe ... -a xx ...'
+/// Required.
 int TargetA;
+///\brief The target nuclei proton number, Z.
+///
+///\note Set by
+///  `GiBUUToStdHep.exe ... -z xx ...'
+/// Required.
 int TargetZ;
+///\brief The maximum number of input entries to process.
+///
+///\note Set by
+///  `GiBUUToStdHep.exe ... -n xx ...'
 long MaxEntries;
-
+///\brief The the debugging verbosity. From 0 (quiet) --- 4 (verbose).
+///
+///\note Set by
+///  `GiBUUToStdHep.exe ... -v xx ...'
 int Verbosity = 0;
 
 }
 
 int GiBUUToStdHep(){
-  std::ifstream ifs(InpFName);
+  std::ifstream ifs(GiBUUToStdHepOpts::InpFName);
   std::string line;
   long ctr = 0;
 
@@ -63,7 +88,7 @@ int GiBUUToStdHep(){
         isHOREv = false;
       }
       if(!(EvNum%1000)){ std::cout << "On Ev: " << EvNum << std::endl; }
-      if(MaxEntries == EvNum){
+      if(GiBUUToStdHepOpts::MaxEntries == EvNum){
         std::cout << "Finishing after " << EvNum << " entries." << std::endl;
         break;
       }
@@ -71,7 +96,7 @@ int GiBUUToStdHep(){
       outRooTracker->EvtNum = EvNum;
 
       //neutrino
-      outRooTracker->StdHepPdg[0] = nuType;
+      outRooTracker->StdHepPdg[0] = GiBUUToStdHepOpts::nuType;
       outRooTracker->StdHepStatus[0] = -1;
       outRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
       outRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
@@ -79,12 +104,12 @@ int GiBUUToStdHep(){
       outRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = Enu;
 
       //target
-      outRooTracker->StdHepPdg[1] = GiBUUUtils::MakeNuclearPDG(TargetZ,TargetA);
+      outRooTracker->StdHepPdg[1] = GiBUUUtils::MakeNuclearPDG(GiBUUToStdHepOpts::TargetZ,GiBUUToStdHepOpts::TargetA);
       outRooTracker->StdHepStatus[1] = -1;
       outRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
       outRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
       outRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
-      outRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] = TargetA;
+      outRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] = GiBUUToStdHepOpts::TargetA;
 
       outRooTracker->StdHepN = 2;
       LastEvNum = EvNum;
@@ -115,14 +140,14 @@ int GiBUUToStdHep(){
       //   << outRooTracker->GiBUU2NeutCode << std::endl;
     }
 
-    if(Verbosity>=1 && !outRooTracker->GiBUU2NeutCode){
+    if(GiBUUToStdHepOpts::Verbosity>=1 && !outRooTracker->GiBUU2NeutCode){
       // std::cout << "[WARN]: Missed a GiBUU reaction code: " << Prodid
       //   << std::endl;
     }
 
     outRooTracker->StdHepN++;
 
-    if(Verbosity && (outRooTracker->StdHepPdg[outRooTracker->StdHepN-1]==0)){
+    if(GiBUUToStdHepOpts::Verbosity && (outRooTracker->StdHepPdg[outRooTracker->StdHepN-1]==0)){
       std::cout << "[WARN] PDG == 0\n\t" << line << std::endl;
       std::cout << "Copy: " << Run << " " <<  EvNum<< " " <<  ID << " "
         << Charge << " " << PerWeight << " " << Pos1 << " " <<
@@ -131,7 +156,7 @@ int GiBUUToStdHep(){
         << std::endl;
     }
 
-    if(Verbosity>2){
+    if(GiBUUToStdHepOpts::Verbosity>2){
       std::cout << "Line: " << line << std::endl;
       std::cout << "Copy: " << Run << " " <<  EvNum<< " " <<  ID << " "
         << Charge << " " << PerWeight << " " << Pos1 << " " <<
@@ -160,7 +185,7 @@ void SetOpts(){
   CLIUtils::OptSpec.emplace_back("-i", "--input-file", true,
     [&] (std::string const &opt) -> bool {
       std::cout << "\tReading GiBUU file : " << opt << std::endl;
-      InpFName = opt;
+      GiBUUToStdHepOpts::InpFName = opt;
       return true;
     }, true,[](){},"<File Name>");
 
@@ -169,7 +194,7 @@ void SetOpts(){
       int vbhold;
       if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
         std::cout << "Nu PDG: " << vbhold << std::endl;
-        nuType = vbhold;
+        GiBUUToStdHepOpts::nuType = vbhold;
         return true;
       }
       return false;
@@ -180,7 +205,7 @@ void SetOpts(){
       int vbhold;
       if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
         std::cout << "Target A: " << vbhold << std::endl;
-        TargetA = vbhold;
+        GiBUUToStdHepOpts::TargetA = vbhold;
         return true;
       }
       return false;
@@ -191,35 +216,35 @@ void SetOpts(){
       int vbhold;
       if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
         std::cout << "Target Z: " << vbhold << std::endl;
-        TargetZ = vbhold;
+        GiBUUToStdHepOpts::TargetZ = vbhold;
         return true;
       }
       return false;
     }, true,[](){},"<Target Z>");
 
-  CLIUtils::OptSpec.emplace_back("-v", "--verbosity", true,
+  CLIUtils::OptSpec.emplace_back("-v", "--GiBUUToStdHepOpts::verbosity", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
       if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
-        std::cout << "Verbosity: " << vbhold << std::endl;
-        Verbosity = vbhold;
+        std::cout << "GiBUUToStdHepOpts::Verbosity: " << vbhold << std::endl;
+        GiBUUToStdHepOpts::Verbosity = vbhold;
         return true;
       }
       return false;
     }, false,
-    [&](){Verbosity = 0;}, "<0-4>{default==0}");
+    [&](){GiBUUToStdHepOpts::Verbosity = 0;}, "<0-4>{default==0}");
 
   CLIUtils::OptSpec.emplace_back("-n", "--nevs", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
       if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
         std::cout << "Number of events: " << vbhold << std::endl;
-        MaxEntries = vbhold;
+        GiBUUToStdHepOpts::MaxEntries = vbhold;
         return true;
       }
       return false;
     }, false,
-    [&](){MaxEntries = -1;}, "<Num Entries [<-1>: means all]> [default==-1]");
+    [&](){GiBUUToStdHepOpts::MaxEntries = -1;}, "<Num Entries [<-1>: means all]> [default==-1]");
 }
 
 int main(int argc, char const *argv[]){
