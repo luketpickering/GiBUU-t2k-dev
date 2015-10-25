@@ -1,3 +1,6 @@
 [submodule "LesHouchesParserClasses_CPP"]
 	path = LesHouchesParserClasses_CPP
 	url = git@github.com:benoleary/LesHouchesParserClasses_CPP.git
+[submodule "utils"]
+	path = utils
+	url = git@github.com:luketpickering/lukes-utils.git
