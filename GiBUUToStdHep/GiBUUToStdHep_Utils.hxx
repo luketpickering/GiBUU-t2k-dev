@@ -68,7 +68,7 @@ void ClearArray2D(T (&arr)[N][M]){
 /// - 32 : 3122
 /// - 33 : 3222, 3212, 3112
 /// - 110 : K+=321, K0=311
-int GiBUUToPDG(int GiBUUCode, double GiBUUCharge);
+int GiBUUToPDG(int GiBUUCode, int GiBUUCharge);
 ///\brief Converts a GiBUU interaction code to the corresponding NEUT code
 ///where possible.
 ///

@@ -50,7 +50,7 @@ std::string int2str(int i){
   return ss.str();
 }
 
-int GiBUUToPDG(int GiBUUCode, double GiBUUCharge){
+int GiBUUToPDG(int GiBUUCode, int GiBUUCharge){
   //https://gibuu.hepforge.org/trac/wiki/ParticleIDs
   switch(GiBUUCode){
     case 1:{

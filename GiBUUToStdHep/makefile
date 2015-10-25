@@ -1,14 +1,17 @@
-CXX := g++
-RCINT := rootcint
-RC := root-config
+CXX = g++
+RCINT = rootcint
+RC = root-config
 
-BDIR :=bin
-LDIR :=lib
+BDIR = bin
 
-TARGET := GiBUUToStdHep.exe
+LHPCROOT =../LesHouchesParserClasses_CPP/LHPC
+LHPCINC :=$(LHPCROOT)/include
+LHPCLIB :=$(LHPCROOT)/lib/libLHPC.a
+
+TARGET = GiBUUToStdHep.exe
 TARGETSRC := $(TARGET:.exe=.cxx)
 
-TOBJS := GiRooTracker.cxx GiBUUToStdHep_Utils.cxx
+TOBJS = GiRooTracker.cxx GiBUUToStdHep_Utils.cxx
 TOBJH := $(TOBJS:.cxx=.hxx)
 
 ROOTCFLAGS := `$(RC) --cflags`
@@ -28,14 +31,17 @@ all: $(TARGET)
 	@echo "*********************************************************************"
 
 
-$(TARGET): $(TARGETSRC) GiBUUToStdHep_Utils.o GiRooTracker.o
-	$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $^
+$(TARGET): $(TARGETSRC) GiBUUToStdHep_Utils.o GiRooTracker.o $(LHPCLIB)
+	$(CXX) -o $@ $(CXXFLAGS) $(LHPCLIB) -I$(LHPCINC) $(LDFLAGS) $^
 
 GiRooTracker.o: GiRooTracker.hxx GiRooTracker.cxx
 	$(CXX) $(CXXFLAGS) -o $@ -c GiRooTracker.cxx
 
 GiBUUToStdHep_Utils.o: GiBUUToStdHep_Utils.hxx GiBUUToStdHep_Utils.cxx
 	$(CXX) $(CXXFLAGS) -o $@ -c GiBUUToStdHep_Utils.cxx
+
+$(LHPCLIB):
+	cd $(LHPCROOT); $(MAKE)
 
 docs: $(TARGETSRC) $(TOBJS) $(TOBJH) dox/GiBUUToStdHep.dox.cfg
 	cd dox; doxygen GiBUUToStdHep.dox.cfg;
@@ -47,3 +53,4 @@ latex_docs: docs
 clean:
 	rm -rf $(TARGET) GiBUUToStdHep_Utils.o GiRooTracker.o $(BDIR)
 	rm -rf dox/html dox/latex GiBUUToStdHep_dox.pdf
+	cd $(LHPCROOT); $(MAKE) clean
