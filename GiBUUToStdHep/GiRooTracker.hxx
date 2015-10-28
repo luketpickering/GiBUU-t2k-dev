@@ -56,6 +56,9 @@ struct GiRooTracker {
   ///\brief Four momentum for particles in this event.
   Double_t StdHepP4 [kGiStdHepNPmax][4];
 
+  ///\brief GiBUU history array, indices correspond to the StdHep arrays.
+  Long_t* GiBHepHistory; //[StdHepN]
+
   ///\brief Function to reset an instance of this class to its default state.
   ///
   ///Used between fillings to result any values to default.

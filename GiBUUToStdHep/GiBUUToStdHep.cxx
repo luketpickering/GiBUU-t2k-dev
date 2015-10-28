@@ -1,22 +1,51 @@
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <algorithm>
 
 #include "TFile.h"
 #include "TTree.h"
+#include "TVector3.h"
 #include "TLorentzVector.h"
 
 #include "LHEF.hpp"
+
+#include "PureGenUtils.hxx"
+#include "CLITools.hxx"
 
 #include "GiBUUToStdHep_Utils.hxx"
 
 #include "GiRooTracker.hxx"
 
 namespace {
+template<typename T>
+inline std::string NegSpacer(T const & num){
+  return (num >= 0)?" ":"";
+}
+inline std::ostream & operator<<(std::ostream & os, TVector3 const & tl){
+  auto prec = os.precision();
+  auto flags = os.flags();
+  os.precision(2);
+  os.flags(std::ios::scientific);
+  os << " " << NegSpacer(tl[0]) << tl[0] << "," << NegSpacer(tl[1]) << tl[1]
+    << "," << NegSpacer(tl[2]) << tl[2] << ")]";
+  os.precision(prec);
+  os.flags(flags);
+  return os;
+}
 inline std::ostream & operator<<(std::ostream & os, TLorentzVector const & tlv){
-  return os << "[ " << tlv[0] << ", " << tlv[1] << ", " << tlv[2] << ", "
-    << tlv[3] << " : M(" << tlv.M() << ") ]";
+  auto prec = os.precision();
+  auto flags = os.flags();
+  os.precision(2);
+  os.flags(std::ios::scientific);
+  os << "[" << NegSpacer(tlv[0]) << tlv[0] << "," << NegSpacer(tlv[1])
+    << tlv[1] << "," << NegSpacer(tlv[2]) << tlv[2] << ","
+    << NegSpacer(tlv[3]) << tlv[3] << ":M(" << tlv.M() << ")]";
+  os.precision(prec);
+  os.flags(flags);
+  return os;
 }
 }
 
@@ -65,228 +94,297 @@ int Verbosity = 0;
 
 }
 
-std::vector<std::string> SplitStringByDelim(std::string const &inp,
-  char const *delim, bool PushEmpty=false){
+struct GiBUUPartBlob {
+  GiBUUPartBlob() : Run(0), EvNum(0), ID(0), Charge(0), PerWeight(0),
+    Position(0,0,0), FourMom(0,0,0,0), History(0), Prodid(0), Enu(0) {}
+  Int_t Run;
+  Int_t EvNum;
+  Int_t ID;
+  Int_t Charge;
+  Double_t PerWeight;
+  TVector3 Position;
+  TLorentzVector FourMom;
+  Long_t History;
+  Int_t Prodid;
+  Double_t Enu;
+};
 
-  size_t nextOccurence = 0;
-  size_t prevOccurence = 0;
-  std::vector<std::string> outV;
-  bool AtEnd = false;
-  while(!AtEnd){
-    nextOccurence = inp.find_first_of(delim,prevOccurence);
-    if(nextOccurence == std::string::npos){
-      if(prevOccurence == inp.length()){
-        break;
-      }
-      AtEnd = true;
-    }
-    if(PushEmpty || (nextOccurence != prevOccurence)){
-      outV.push_back(inp.substr(prevOccurence,(nextOccurence-prevOccurence)));
-    }
-    prevOccurence = nextOccurence+1;
+namespace {
+  std::ostream& operator<<(std::ostream& os, GiBUUPartBlob const & part){
+    return os << "{ Run: " << part.Run
+              << ", EvNum: " << part.EvNum
+              << ", ID: " << part.ID
+              << ", Charge: " << part.Charge
+              << ", PerWeight: " << part.PerWeight
+              << ", Pos: " << part.Position
+              << ", 4Mom: " << part.FourMom
+              << ", History: " << part.History
+              << ", Prodid: " << part.Prodid
+              << ", Enu: " << part.Enu << " }";
   }
-  return outV;
 }
 
-std::tuple<int,int,int,int,float,TVector3,TLorentzVector,long, int,float>
-GetParticleLine(std::string const &line){
+GiBUUPartBlob GetParticleLine(std::string const &line){
 
-  int Run, EvNum, ID, Charge, Prodid;
-  long History;
-  double PerWeight,Pos1,Pos2,Pos3,MomE,Mom1,Mom2,Mom3,Enu;
+  GiBUUPartBlob pblob;
 
-  auto const &splitLine = SplitStringByDelim(line, " ");
+  auto const &splitLine = PGUtils::SplitStringByDelim(line, " ");
   if(splitLine.size() != 15){
     std::cout << "[WARN]: Event had malformed particle line: \""
       << line << "\"" << std::endl;
-    return std::make_tuple(0,0,0,0,0, TVector3(0,0,0),
-      TLorentzVector(0,0,0,0),0,0,0);
+    return pblob;
   }
 
   try{
-
-    Run = std::stoi(splitLine[0]);
-    EvNum = std::stoi(splitLine[1]);
-    ID = std::stoi(splitLine[2]);
-    Charge = std::stoi(splitLine[3]);
-    PerWeight = std::stod(splitLine[4]);
-    Pos1 = std::stod(splitLine[5]);
-    Pos2 = std::stod(splitLine[6]);
-    Pos3 = std::stod(splitLine[7]);
-    MomE = std::stod(splitLine[8]);
-    Mom1 = std::stod(splitLine[9]);
-    Mom2 = std::stod(splitLine[10]);
-    Mom3 = std::stod(splitLine[11]);
-    History = std::stol(splitLine[12]);
-    Prodid = std::stoi(splitLine[13]);
-    Enu = std::stod(splitLine[14]);
-
+    pblob.Run = std::stoi(splitLine[0]);
+    pblob.EvNum = std::stoi(splitLine[1]);
+    pblob.ID = std::stoi(splitLine[2]);
+    pblob.Charge = std::stoi(splitLine[3]);
+    pblob.PerWeight = std::stod(splitLine[4]);
+    pblob.Position[GiRooTracker::kStdHepIdxPx] = std::stod(splitLine[5]);
+    pblob.Position[GiRooTracker::kStdHepIdxPy] = std::stod(splitLine[6]);
+    pblob.Position[GiRooTracker::kStdHepIdxPz] = std::stod(splitLine[7]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxE] = std::stod(splitLine[8]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxPx] = std::stod(splitLine[9]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxPy] = std::stod(splitLine[10]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxPz] = std::stod(splitLine[11]);
+    pblob.History = std::stol(splitLine[12]);
+    pblob.Prodid = std::stoi(splitLine[13]);
+    pblob.Enu = std::stod(splitLine[14]);
   } catch (const std::invalid_argument& ia) {
   std::cout << "[WARN]: Failed to parse one of the values: \""
     << line << "\"" << std::endl;
     throw;
   }
-  // std::cout << "[PARSED]: Run: " << Run << std::endl;
-  // std::cout << "[PARSED]: EvNum: " << EvNum << std::endl;
-  // std::cout << "[PARSED]: ID: " << ID << std::endl;
-  // std::cout << "[PARSED]: Charge: " << Charge << std::endl;
-  // std::cout << "[PARSED]: PerWeight: " << PerWeight << std::endl;
-  // std::cout << "[PARSED]: Pos1: " << Pos1 << std::endl;
-  // std::cout << "[PARSED]: Pos2: " << Pos2 << std::endl;
-  // std::cout << "[PARSED]: Pos3: " << Pos3 << std::endl;
-  // std::cout << "[PARSED]: MomE: " << MomE << std::endl;
-  // std::cout << "[PARSED]: Mom1: " << Mom1 << std::endl;
-  // std::cout << "[PARSED]: Mom2: " << Mom2 << std::endl;
-  // std::cout << "[PARSED]: Mom3: " << Mom3 << std::endl;
-  // std::cout << "[PARSED]: History: " << History << std::endl;
-  // std::cout << "[PARSED]: Prodid: " << Prodid << std::endl;
-  // std::cout << "[PARSED]: Enu: " << Enu << std::endl;
 
-  return std::make_tuple(Run, EvNum, ID, Charge, PerWeight, TVector3(Pos1,Pos2,Pos3),
-    TLorentzVector(Mom1,Mom2,Mom3,MomE), History, Prodid, Enu);
-
+  if(GiBUUToStdHepOpts::Verbosity > 2){
+    std::cout << "[PARSED]: " << pblob << std::endl;
+  }
+  return pblob;
 }
 
 int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
 
   std::ifstream ifs(GiBUUToStdHepOpts::InpFName);
+  std::vector< std::vector<GiBUUPartBlob> > Events;
+  // http://www2.research.att.com/~bs/bs_faq2.html
+  // People sometimes worry about the cost of std::vector growing incrementally.
+  // I used to worry about that and used reserve() to optimize the growth.
+  // After measuring my code and repeatedly having trouble finding the
+  // performance benefits of reserve() in real programs, I stopped using it
+  // except where it is needed to avoid iterator invalidation (a rare case in my
+  // code). Again: measure before you optimize.
+
   std::string line;
-  long ctr = 0;
-
+  std::vector<GiBUUPartBlob> CurrEv;
   int LastEvNum = 0;
-
-  bool isHOREv = false;
-
+  int LineNum = 0;
+  int NumEvs = 0;
   while(std::getline(ifs,line)){
-    if(!ctr){ctr++;continue;} //skip the table header
-
-    int Run, EvNum, Charge, ID, Prodid;
-    long History;
-    double PerWeight,Enu;
-    TVector3 pos(0,0,0);
-    TLorentzVector mom4(0,0,0,0);
-
-    auto const & part = GetParticleLine(line);
-
-    std::tie(Run, EvNum, ID, Charge, PerWeight, pos, mom4, History, Prodid,
-      Enu) = part;
-
-    if(EvNum != LastEvNum){
-      if(LastEvNum){
-        if(isHOREv && !giRooTracker->GiBUU2NeutCode){
-          std::cout << "[WARN]: Missed a GiBUU reaction code: " << Prodid
-            << std::endl;
-        }
-        std::cout << "====" << std::endl;
-        OutputTree->Fill();
-        giRooTracker->Reset();
-        isHOREv = false;
+    if(GiBUUToStdHepOpts::Verbosity > 3){
+      std::cout << "[LINE:" << LineNum << "]: " << line << std::endl;
+    }
+    if(!LastEvNum){ //Skip header line
+      if(!std::getline(ifs,line)){
+        throw 5;
       }
-      if(!(EvNum%1000)){ std::cout << "On Ev: " << EvNum << std::endl; }
-      if(GiBUUToStdHepOpts::MaxEntries == EvNum){
-        std::cout << "Finishing after " << EvNum << " entries." << std::endl;
+      LineNum++;
+      std::cout << "[LINE:" << LineNum << "]: " << line << std::endl;
+    }
+    auto const & part = GetParticleLine(line);
+    if((part.EvNum != LastEvNum) && LastEvNum){
+      Events.push_back(CurrEv);
+      NumEvs++;
+      CurrEv.clear();
+      if(GiBUUToStdHepOpts::MaxEntries == NumEvs){
         break;
       }
-
-      giRooTracker->EvtNum = EvNum;
-
-      //neutrino
-      giRooTracker->StdHepPdg[0] = GiBUUToStdHepOpts::nuType;
-      giRooTracker->StdHepStatus[0] = -1;
-      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
-      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
-      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] = Enu;
-      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = Enu;
-
-      //target
-      giRooTracker->StdHepPdg[1] =
-        GiBUUUtils::MakeNuclearPDG(GiBUUToStdHepOpts::TargetZ,
-                                   GiBUUToStdHepOpts::TargetA);
-      giRooTracker->StdHepStatus[1] = -1;
-      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
-      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
-      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
-      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
-        GiBUUToStdHepOpts::TargetA;
-
-      giRooTracker->StdHepN = 2;
-      LastEvNum = EvNum;
     }
-
-    if(GiBUUToStdHepOpts::HaveStruckNucleonInfo && giRooTracker->StdHepN == 3){
-      giRooTracker->StdHepPdg[giRooTracker->StdHepN] = 0;
-      giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
-    } else {
-      giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
-        GiBUUUtils::GiBUUToPDG(ID,Charge);
-      giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1;
-    }
-
-    giRooTracker->StdHepP4[giRooTracker->StdHepN]\
-      [GiRooTracker::kStdHepIdxPx] = mom4.X();
-    giRooTracker->StdHepP4[giRooTracker->StdHepN]\
-      [GiRooTracker::kStdHepIdxPy] = mom4.Y();
-    giRooTracker->StdHepP4[giRooTracker->StdHepN]\
-      [GiRooTracker::kStdHepIdxPz] = mom4.Z();
-    giRooTracker->StdHepP4[giRooTracker->StdHepN]\
-      [GiRooTracker::kStdHepIdxE] = mom4.E();
-
-    std::cout << "\t[" << giRooTracker->StdHepN << "] ("
-      << giRooTracker->StdHepPdg[giRooTracker->StdHepN] << " | " << ID << ": "
-      << Charge << ") "
-      << mom4 << " | " << History << std::endl;
-
-    giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(Prodid,
-      giRooTracker->StdHepPdg[giRooTracker->StdHepN]);
-
-    if((Prodid == 32) || (Prodid == 33)){
-      isHOREv = true;
-    }
-
-    giRooTracker->StdHepN++;
-
-    ctr++;
+    CurrEv.push_back(part);
+    LastEvNum = part.EvNum;
+    LineNum++;
   }
-  OutputTree->Fill();
-  ifs.close();
+  if(CurrEv.size()){
+    Events.push_back(CurrEv);
+    CurrEv.clear();
+  }
+
+  ifs.close(); // Read all the lines.
+  std::cout << "Found " << Events.size() << " events in "
+    << GiBUUToStdHepOpts::InpFName << "." << std::endl;
+
+  NumEvs = 0;
+  for(auto const & ev : Events){
+    giRooTracker->Reset();
+
+    int const & EvNum = ev.front().EvNum;
+    if(!(NumEvs%1000) && GiBUUToStdHepOpts::Verbosity){
+      std::cout << "Read " << NumEvs << " events." << std::endl;
+    }
+
+    if(GiBUUToStdHepOpts::MaxEntries == NumEvs){
+      std::cout << "Finishing after " << NumEvs << " entries."
+        << std::endl;
+      break;
+    }
+
+    giRooTracker->EvtNum = EvNum;
+
+    //neutrino
+    giRooTracker->StdHepPdg[0] = GiBUUToStdHepOpts::nuType;
+    giRooTracker->StdHepStatus[0] = -1;
+    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
+    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
+    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] = ev.front().Enu;
+    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().Enu;
+
+    //target
+    giRooTracker->StdHepPdg[1] =
+      PGUtils::MakeNuclearPDG(GiBUUToStdHepOpts::TargetZ,
+                                 GiBUUToStdHepOpts::TargetA);
+    giRooTracker->StdHepStatus[1] = -1;
+    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
+    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
+    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
+    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
+      GiBUUToStdHepOpts::TargetA;
+
+    giRooTracker->StdHepN = 2;
+
+    for(auto const & part : ev){
+
+      if( GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
+          (giRooTracker->StdHepN == 3) ){
+        giRooTracker->StdHepPdg[giRooTracker->StdHepN] = 0;
+        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
+      } else {
+        giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
+          GiBUUUtils::GiBUUToPDG(part.ID,part.Charge);
+        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1;
+      }
+
+      giRooTracker->StdHepP4[giRooTracker->StdHepN]\
+        [GiRooTracker::kStdHepIdxPx] = part.FourMom.X();
+      giRooTracker->StdHepP4[giRooTracker->StdHepN]\
+        [GiRooTracker::kStdHepIdxPy] = part.FourMom.Y();
+      giRooTracker->StdHepP4[giRooTracker->StdHepN]\
+        [GiRooTracker::kStdHepIdxPz] = part.FourMom.Z();
+      giRooTracker->StdHepP4[giRooTracker->StdHepN]\
+        [GiRooTracker::kStdHepIdxE] = part.FourMom.E();
+
+      giRooTracker->GiBHepHistory[giRooTracker->StdHepN] = part.History;
+      giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(part.Prodid,
+        giRooTracker->StdHepPdg[giRooTracker->StdHepN]);
+
+      giRooTracker->StdHepN++;
+    }
+
+    if(GiBUUToStdHepOpts::Verbosity > 1){
+      std::cout << "[INFO]: EvNo: " << EvNum
+      << ", contained "
+      << giRooTracker->StdHepN << " particles."
+      << "\n\tNeutConventionReactionCode: " <<
+        giRooTracker->GiBUU2NeutCode
+      << "\n\t[Lep In] : "
+      << TLorentzVector(
+          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
+          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
+          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
+          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE])
+       << std::endl;
+       std::cout << "\t[Target]  : " << giRooTracker->StdHepPdg[1] << std::endl;
+      if(GiBUUToStdHepOpts::HaveStruckNucleonInfo){
+        std::cout << "\t[Nuc In] : "
+        << TLorentzVector(
+          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
+          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
+          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
+          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
+        << std::endl;
+      }
+
+      //We have already printed the struck nucleon
+      for(Int_t stdHepInd = (GiBUUToStdHepOpts::HaveStruckNucleonInfo)?4:3;
+        stdHepInd < giRooTracker->StdHepN;
+        ++stdHepInd){
+
+        std::cout << "\t[" << std::setw(2)
+          << (stdHepInd-((GiBUUToStdHepOpts::HaveStruckNucleonInfo)?4:3))
+          << "](" << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd] << ")"
+          << TLorentzVector(
+          giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPx],
+          giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPy],
+          giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPz],
+          giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxE])
+        << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")" << std::endl;
+      }
+      std::cout << "\t[Lep Out]: "
+      << TLorentzVector(
+          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
+          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
+          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
+          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
+       << std::endl << std::endl;
+    }
+    OutputTree->Fill();
+    NumEvs++;
+  }
   return 0;
 }
 
-std::tuple<int, TLorentzVector,TLorentzVector, TLorentzVector>
-  ParseAdditionInfoLine(std::string const &optLine){
+struct LHAdditionInfoLine {
+  LHAdditionInfoLine() : Magic(0), EvId(0), EvWeight(0), Nu4Mom(0,0,0,0),
+    ChargedLepton4Mom(0,0,0,0), StruckNuc4Mom(0,0,0,0){}
+  Int_t Magic;
+  Int_t EvId;
+  Double_t EvWeight;
+  TLorentzVector Nu4Mom;
+  TLorentzVector ChargedLepton4Mom;
+  TLorentzVector StruckNuc4Mom;
+};
+
+namespace {
+  std::ostream& operator<<(std::ostream& os, LHAdditionInfoLine const & info){
+    return os << "{ "
+              << ", Magic: " << info.Magic
+              << ", EvId: " << info.EvId
+              << ", EvWeight: " << info.EvWeight
+              << ", Nu4Mom: " << info.Nu4Mom
+              << ", ChargedLepton4Mom: " << info.ChargedLepton4Mom
+              << ", StruckNuc4Mom: " << info.StruckNuc4Mom
+              << " }";
+  }
+}
+
+LHAdditionInfoLine ParseAdditionInfoLine(std::string const &optLine){
 
   std::string scrubbedLine = optLine.substr(2); // scrub off the '# ';
+  LHAdditionInfoLine info;
 
-  int Magic, EvId;
-  float weight, nuE, nuPX, nuPY, nuPZ, clepE, clepPX, clepPY, clepPZ,
-    bosE = 0, bosPX = 0, bosPY = 0, bosPZ = 0;
-
-  auto const &splitLine = SplitStringByDelim(scrubbedLine, " ");
+  auto const &splitLine = PGUtils::SplitStringByDelim(scrubbedLine, " ");
   if(splitLine.size() != (11 + (GiBUUToStdHepOpts::HaveStruckNucleonInfo?4:0))){
     std::cout << "[WARN]: Event had malformed additional info line: \""
       << optLine << "\"" << std::endl;
-    return std::make_tuple(0, TLorentzVector(0,0,0,0),
-      TLorentzVector(0,0,0,0),
-      TLorentzVector(0,0,0,0));
+    return info;
   }
 
   try{
-    Magic = std::stoi(splitLine[0]);(void)Magic;
-    EvId = std::stoi(splitLine[1]);
-    weight = std::stof(splitLine[2]);(void)weight;
-    nuE = std::stof(splitLine[3]);
-    nuPX = std::stof(splitLine[4]);
-    nuPY = std::stof(splitLine[5]);
-    nuPZ = std::stof(splitLine[6]);
-    clepE = std::stof(splitLine[7]);
-    clepPX = std::stof(splitLine[8]);
-    clepPY = std::stof(splitLine[9]);
-    clepPZ = std::stof(splitLine[10]);
+    info.Magic = std::stoi(splitLine[0]);
+    info.EvId = std::stoi(splitLine[1]);
+    info.EvWeight = std::stof(splitLine[2]);
+    info.Nu4Mom[GiRooTracker::kStdHepIdxE] = std::stof(splitLine[3]);
+    info.Nu4Mom[GiRooTracker::kStdHepIdxPx] = std::stof(splitLine[4]);
+    info.Nu4Mom[GiRooTracker::kStdHepIdxPy] = std::stof(splitLine[5]);
+    info.Nu4Mom[GiRooTracker::kStdHepIdxPz] = std::stof(splitLine[6]);
+    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxE] = std::stof(splitLine[7]);
+    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxPx] = std::stof(splitLine[8]);
+    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxPy] = std::stof(splitLine[9]);
+    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxPz] = std::stof(splitLine[10]);
     if(GiBUUToStdHepOpts::HaveStruckNucleonInfo){
-      bosE = std::stof(splitLine[11]);
-      bosPX = std::stof(splitLine[12]);
-      bosPY = std::stof(splitLine[13]);
-      bosPZ = std::stof(splitLine[14]);
+      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxE] = std::stof(splitLine[11]);
+      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxPx] = std::stof(splitLine[12]);
+      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxPy] = std::stof(splitLine[13]);
+      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxPz] = std::stof(splitLine[14]);
     }
   } catch (const std::invalid_argument& ia) {
   std::cout << "[WARN]: Failed to parse one of the values: \""
@@ -294,25 +392,11 @@ std::tuple<int, TLorentzVector,TLorentzVector, TLorentzVector>
     throw;
   }
 
-  // std::cout << "[PARSED] : Magic = " << Magic << " from " << splitLine[0] << std::endl;
-  // std::cout << "[PARSED] : EvId = " << EvId << " from " << splitLine[1] << std::endl;
-  // std::cout << "[PARSED] : weight = " << weight << " from " << splitLine[2] << std::endl;
-  // std::cout << "[PARSED] : nuE = " << nuE << " from " << splitLine[3] << std::endl;
-  // std::cout << "[PARSED] : nuPX = " << nuPX << " from " << splitLine[4] << std::endl;
-  // std::cout << "[PARSED] : nuPY = " << nuPY << " from " << splitLine[5] << std::endl;
-  // std::cout << "[PARSED] : nuPZ = " << nuPZ << " from " << splitLine[6] << std::endl;
-  // std::cout << "[PARSED] : clepE = " << clepE << " from " << splitLine[7] << std::endl;
-  // std::cout << "[PARSED] : clepPX = " << clepPX << " from " << splitLine[8] << std::endl;
-  // std::cout << "[PARSED] : clepPY = " << clepPY << " from " << splitLine[9] << std::endl;
-  // std::cout << "[PARSED] : clepPZ = " << clepPZ << " from " << splitLine[10] << std::endl;
-  // std::cout << "[PARSED] : bosE = " << bosE << " from " << splitLine[11] << std::endl;
-  // std::cout << "[PARSED] : bosPX = " << bosPX << " from " << splitLine[12] << std::endl;
-  // std::cout << "[PARSED] : bosPY = " << bosPY << " from " << splitLine[13] << std::endl;
-  // std::cout << "[PARSED] : bosPZ = " << bosPZ << " from " << splitLine[14] << std::endl;
+  if(GiBUUToStdHepOpts::Verbosity > 2){
+    std::cout << "[PARSED]: " << info << std::endl;
+  }
 
-  return std::make_tuple(EvId, TLorentzVector(nuPX,nuPY,nuPZ,nuE),
-    TLorentzVector(clepPX,clepPY,clepPZ,clepE),
-    TLorentzVector(bosPX,bosPY,bosPZ,bosE));
+  return info;
 }
 
 
@@ -323,44 +407,35 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
 
   LHPC::LHEF::LhefEvent const& currentEvent = LHEFParser.getEvent();
   while(LHEFParser.readNextEvent()){
-    std::cout << "[INFO] : EvNo: " << currentEvent.getEventNumberInFile()
-    << ", contained "
-    << currentEvent.getNumberOfParticles() << " particles:" << std::endl;
-    std::tuple<int, TLorentzVector,TLorentzVector, TLorentzVector> const &
-      ExtraInfo = ParseAdditionInfoLine(currentEvent.getOptionalInformation());
 
-    std::cout << "NeutEquivMode: " <<
-      GiBUUUtils::GiBUU2NeutReacCode(std::get<0>(ExtraInfo),0) << std::endl;
-    std::cout << "\t[Lep In]: " << std::get<1>(ExtraInfo) << std::endl;
+    auto const & ExtraInfo =
+      ParseAdditionInfoLine(currentEvent.getOptionalInformation());
 
-    if(GiBUUToStdHepOpts::HaveStruckNucleonInfo){
-      std::cout << "\t[Bos In]: " << std::get<3>(ExtraInfo) << std::endl;
-    }
     giRooTracker->EvtNum = currentEvent.getEventNumberInFile();
 
     //neutrino
     giRooTracker->StdHepPdg[0] = GiBUUToStdHepOpts::nuType;
     giRooTracker->StdHepStatus[0] = -1;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] =
-      std::get<1>(ExtraInfo).X();
+      ExtraInfo.Nu4Mom.X();
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] =
-      std::get<1>(ExtraInfo).Y();
+      ExtraInfo.Nu4Mom.Y();
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] =
-      std::get<1>(ExtraInfo).Z();
+      ExtraInfo.Nu4Mom.Z();
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] =
-      std::get<1>(ExtraInfo).E();
+      ExtraInfo.Nu4Mom.E();
 
     //target
     giRooTracker->StdHepPdg[1] =
-      GiBUUUtils::MakeNuclearPDG(GiBUUToStdHepOpts::TargetZ,
+      PGUtils::MakeNuclearPDG(GiBUUToStdHepOpts::TargetZ,
                                  GiBUUToStdHepOpts::TargetA);
     giRooTracker->StdHepStatus[1] = 11;
     giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] =
-      std::get<3>(ExtraInfo).X();
+     ExtraInfo.StruckNuc4Mom.X();
     giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] =
-      std::get<3>(ExtraInfo).Y();
+     ExtraInfo.StruckNuc4Mom.Y();
     giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] =
-      std::get<3>(ExtraInfo).Z();
+     ExtraInfo.StruckNuc4Mom.Z();
     giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
       GiBUUToStdHepOpts::TargetA;
 
@@ -368,15 +443,28 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
     giRooTracker->StdHepPdg[2] = (GiBUUToStdHepOpts::nuType-1); // you hope.
     giRooTracker->StdHepStatus[2] = 1;
     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx] =
-      std::get<2>(ExtraInfo).X();
+      ExtraInfo.ChargedLepton4Mom.X();
     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy] =
-      std::get<2>(ExtraInfo).Y();
+      ExtraInfo.ChargedLepton4Mom.Y();
     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz] =
-      std::get<2>(ExtraInfo).Z();
+      ExtraInfo.ChargedLepton4Mom.Z();
     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE] =
-      std::get<2>(ExtraInfo).E();
+      ExtraInfo.ChargedLepton4Mom.E();
 
     giRooTracker->StdHepN = 3;
+
+    if(GiBUUToStdHepOpts::Verbosity > 1){
+      std::cout << "\n[INFO]: EvNo: " << currentEvent.getEventNumberInFile()
+      << ", contained "
+      << (currentEvent.getNumberOfParticles()+3) << " particles."
+      << "\n\tNeutConventionReactionCode: " <<
+        GiBUUUtils::GiBUU2NeutReacCode(ExtraInfo.EvId,0)
+      << "\n\t[Lep In] : " << ExtraInfo.Nu4Mom << std::endl;
+      std::cout << "\t[Target]  : " << giRooTracker->StdHepPdg[1] << std::endl;
+      if(GiBUUToStdHepOpts::HaveStruckNucleonInfo){
+        std::cout << "\t[Nuc In] : " << ExtraInfo.StruckNuc4Mom << std::endl;
+      }
+    }
 
     for(int i = 0; i < currentEvent.getNumberOfParticles(); ++i){
       LHPC::LHEF::ParticleLine const &p = currentEvent.getLine(i+1);
@@ -384,8 +472,11 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
       TLorentzVector fourmom(p.getXMomentum(),p.getYMomentum(),
         p.getZMomentum(),p.getEnergy());
 
-      std::cout << "\t[" << i << "] (" << p.getParticleCode() << ") "
-        << fourmom << std::endl;
+      if(GiBUUToStdHepOpts::Verbosity > 1){
+        std::cout << "\t[" << std::setw(2) << i << "]("
+          << std::setw(5) << p.getParticleCode() << ")"
+          << fourmom << std::endl;
+      }
 
       giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
         p.getParticleCode();
@@ -400,12 +491,15 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
         [GiRooTracker::kStdHepIdxE] = p.getEnergy();
 
       giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
-        std::get<0>(ExtraInfo),
+        ExtraInfo.EvId,
         giRooTracker->StdHepPdg[giRooTracker->StdHepN]);
       giRooTracker->StdHepN++;
     }
 
-    std::cout << "\t[Lep Out]: " << std::get<2>(ExtraInfo) << std::endl;
+    if(GiBUUToStdHepOpts::Verbosity > 1){
+      std::cout << "\t[Lep Out]: " << ExtraInfo.ChargedLepton4Mom
+        << std::endl;
+    }
 
     EvNum++;
     OutputTree->Fill();
@@ -448,13 +542,8 @@ int GiBUUToStdHep(){
 }
 
 void SetOpts(){
-  CLIUtils::OptSpec.emplace_back("-h","--help", false,
-    [&] (std::string const &opt) -> bool {
-      CLIUtils::SayRunLike();
-      exit(0);
-    });
 
-  CLIUtils::OptSpec.emplace_back("-f", "--FEinput-file", true,
+  CLIArgs::AddOpt("-f", "--FEinput-file", true,
     [&] (std::string const &opt) -> bool {
       std::cout << "\t--Reading FinalEvents-style GiBUU file : "
       << opt << std::endl;
@@ -468,7 +557,7 @@ void SetOpts(){
       return true;
     }, false,[](){GiBUUToStdHepOpts::InpIsFE = false;},"<File Name>");
 
-  CLIUtils::OptSpec.emplace_back("-l", "--LHinput-file", true,
+  CLIArgs::AddOpt("-l", "--LHinput-file", true,
     [&] (std::string const &opt) -> bool {
       std::cout << "\t--Reading LesHouches Event Format GiBUU file : "
       << opt << std::endl;
@@ -482,7 +571,7 @@ void SetOpts(){
       return true;
     }, false,[](){GiBUUToStdHepOpts::InpIsLH = false;},"<File Name>");
 
-  CLIUtils::OptSpec.emplace_back("-o", "--output-file", true,
+  CLIArgs::AddOpt("-o", "--output-file", true,
     [&] (std::string const &opt) -> bool {
       GiBUUToStdHepOpts::OutFName = opt;
       std::cout << "\t--Writing to file "
@@ -492,10 +581,10 @@ void SetOpts(){
       "<File Name {default:GiBUURooTracker.root}>");
 
 
-  CLIUtils::OptSpec.emplace_back("-u", "--nu-pdg", true,
+  CLIArgs::AddOpt("-u", "--nu-pdg", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
-      if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
+      if(PGUtils::str2int(vbhold,opt.c_str()) == PGUtils::STRINT_SUCCESS){
         std::cout << "\t--Nu PDG: " << vbhold << std::endl;
         GiBUUToStdHepOpts::nuType = vbhold;
         return true;
@@ -503,10 +592,10 @@ void SetOpts(){
       return false;
     }, true,[](){},"<Neutrino PDG identifier>");
 
-  CLIUtils::OptSpec.emplace_back("-a", "--target-a", true,
+  CLIArgs::AddOpt("-a", "--target-a", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
-      if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
+      if(PGUtils::str2int(vbhold,opt.c_str()) == PGUtils::STRINT_SUCCESS){
         std::cout << "\t--Target A: " << vbhold << std::endl;
         GiBUUToStdHepOpts::TargetA = vbhold;
         return true;
@@ -514,10 +603,10 @@ void SetOpts(){
       return false;
     }, true,[](){},"<Target A>");
 
-  CLIUtils::OptSpec.emplace_back("-z", "--target-z", true,
+  CLIArgs::AddOpt("-z", "--target-z", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
-      if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
+      if(PGUtils::str2int(vbhold,opt.c_str()) == PGUtils::STRINT_SUCCESS){
         std::cout << "\t--Target Z: " << vbhold << std::endl;
         GiBUUToStdHepOpts::TargetZ = vbhold;
         return true;
@@ -525,10 +614,10 @@ void SetOpts(){
       return false;
     }, true,[](){},"<Target Z>");
 
-  CLIUtils::OptSpec.emplace_back("-v", "--GiBUUToStdHepOpts::verbosity", true,
+  CLIArgs::AddOpt("-v", "--GiBUUToStdHepOpts::verbosity", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
-      if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
+      if(PGUtils::str2int(vbhold,opt.c_str()) == PGUtils::STRINT_SUCCESS){
         std::cout << "\t--GiBUUToStdHepOpts::Verbosity: " << vbhold << std::endl;
         GiBUUToStdHepOpts::Verbosity = vbhold;
         return true;
@@ -537,10 +626,10 @@ void SetOpts(){
     }, false,
     [&](){GiBUUToStdHepOpts::Verbosity = 0;}, "<0-4>{default==0}");
 
-  CLIUtils::OptSpec.emplace_back("-n", "--nevs", true,
+  CLIArgs::AddOpt("-n", "--nevs", true,
     [&] (std::string const &opt) -> bool {
       int vbhold;
-      if(GiBUUUtils::str2int(vbhold,opt.c_str()) == GiBUUUtils::STRINT_SUCCESS){
+      if(PGUtils::str2int(vbhold,opt.c_str()) == PGUtils::STRINT_SUCCESS){
         std::cout << "\t--Processing " << vbhold << " events." << std::endl;
         GiBUUToStdHepOpts::MaxEntries = vbhold;
         return true;
@@ -550,7 +639,7 @@ void SetOpts(){
     [&](){GiBUUToStdHepOpts::MaxEntries = -1;},
       "<Num Entries [<-1>: means all]> [default==-1]");
 
-  CLIUtils::OptSpec.emplace_back("-b", "--have-bosonic-info", false,
+  CLIArgs::AddOpt("-b", "--have-bosonic-info", false,
     [&] (std::string const &opt) -> bool {
       GiBUUToStdHepOpts::HaveStruckNucleonInfo = true;
       return true;
@@ -561,10 +650,16 @@ void SetOpts(){
 
 int main(int argc, char const *argv[]){
 
-  SetOpts();
-  CLIUtils::AddArguments(argc,argv);
-  if(!CLIUtils::GetOpts()){
-    CLIUtils::SayRunLike();
+  try {
+    SetOpts();
+  } catch (std::exception const & e){
+    std::cerr << "[ERROR]: " << e.what() << std::endl;
+    return 1;
+  }
+
+  CLIArgs::AddArguments(argc,argv);
+  if(!CLIArgs::HandleArgs()){
+    CLIArgs::SayRunLike();
     return 1;
   }
 

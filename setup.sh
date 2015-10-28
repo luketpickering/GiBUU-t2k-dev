@@ -8,11 +8,16 @@ else
   SETUPDIR=$(readlink -f ${BASH_SOURCE%/*})
 fi
 
-if ! [[ ":$PATH:" == *":${SETUPDIR}/bin:"* ]]; then
+if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUToStdHep/bin:"* ]]; then
   export PATH=${SETUPDIR}/GiBUUToStdHep/bin:$PATH
 fi
-if ! [[ ":$LD_LIBRARY_PATH:" == *":${SETUPDIR}/lib:"* ]]; then
-  export LD_LIBRARY_PATH=${SETUPDIR}/GiBUUToStdHep/lib:$LD_LIBRARY_PATH
+
+if [[ -e "${SETUPDIR}/GiBUUInstall/release1.6/bin/gibuu" ]]; then
+  if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUInstall/release1.6/bin:"* ]]; then
+    export GIBUU=${SETUPDIR}/GiBUUInstall/release1.6
+    export PATH=${GIBUU}/bin:${PATH}
+    echo "Added patched GiBUU install to PATH @ ${GIBUU}/bin/gibuu"
+  fi
 fi
 
 unset SETUPDIR

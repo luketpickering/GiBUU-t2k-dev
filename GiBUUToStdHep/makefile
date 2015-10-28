@@ -4,15 +4,12 @@ RC = root-config
 
 BDIR = bin
 
-LHPCROOT =../LesHouchesParserClasses_CPP/LHPC
-LHPCINC :=$(LHPCROOT)/include
-LHPCLIB :=$(LHPCROOT)/lib/libLHPC.a
-
 TARGET = GiBUUToStdHep.exe
 TARGETSRC := $(TARGET:.exe=.cxx)
 
-TOBJS = GiRooTracker.cxx GiBUUToStdHep_Utils.cxx
-TOBJH := $(TOBJS:.cxx=.hxx)
+SRCF = GiRooTracker.cxx GiBUUToStdHep_Utils.cxx
+HF := $(SRCF:.cxx=.hxx)
+OBJS := $(SRCF:.cxx=.o)
 
 ROOTCFLAGS := `$(RC) --cflags`
 ROOTLDFLAGS := `$(RC) --libs --glibs`
@@ -20,7 +17,16 @@ ROOTLDFLAGS := `$(RC) --libs --glibs`
 CXXFLAGS := -fPIC $(ROOTCFLAGS) -g -std=c++11 -Wall
 LDFLAGS := $(ROOTLDFLAGS) -Wl,-rpath=.
 
-.PHONY: all clean
+LHPCROOT =../LesHouchesParserClasses_CPP/LHPC
+LHPCINC :=$(LHPCROOT)/include
+LHPCLIB :=$(LHPCROOT)/lib/libLHPC.a
+LHPCLD := -L$(LHPCROOT)/lib -lLHPC
+
+UTILSLOC := ../utils
+LIBUTILS := $(UTILSLOC)/lib/libPureGenUtils.a
+LIBUTILSLD := -L$(UTILSLOC)/lib  -lPureGenUtils
+
+.PHONY: all clean distclean
 
 all: $(TARGET)
 	mkdir -p $(BDIR)
@@ -30,15 +36,37 @@ all: $(TARGET)
 	@echo "Success. Built GiBUUToStdHep."
 	@echo "*********************************************************************"
 
+../GiBUUInstall/release1.6:
+	mkdir -p ../GiBUUInstall;
+	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/release1.6 ./release1.6
 
-$(TARGET): $(TARGETSRC) GiBUUToStdHep_Utils.o GiRooTracker.o $(LHPCLIB)
-	$(CXX) -o $@ $(CXXFLAGS) $(LHPCLIB) -I$(LHPCINC) $(LDFLAGS) $^
+../GiBUUInstall/buuinput:
+	mkdir -p ../GiBUUInstall;
+	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/buuinput1.6 ./buuinput
 
-GiRooTracker.o: GiRooTracker.hxx GiRooTracker.cxx
-	$(CXX) $(CXXFLAGS) -o $@ -c GiRooTracker.cxx
+../GiBUUInstall/release1.6/InitialStateInfo.patched: ../GiBUUInstall/release1.6
+	cd ../GiBUUInstall; patch -p0 < ../AddInitStateInfo_fixed.patch
+	touch $@
 
-GiBUUToStdHep_Utils.o: GiBUUToStdHep_Utils.hxx GiBUUToStdHep_Utils.cxx
-	$(CXX) $(CXXFLAGS) -o $@ -c GiBUUToStdHep_Utils.cxx
+
+../GiBUUInstall/release1.6/bin/gibuu: ../GiBUUInstall/release1.6/InitialStateInfo.patched ../GiBUUInstall/buuinput
+	cd ../GiBUUInstall/release1.6; $(MAKE)
+	cd ../GiBUUInstall/release1.6; mkdir -p bin; cp objects/GiBUU.x bin/gibuu;
+	@echo ""
+	@echo "*********************************************************************"
+	@echo "Success. Built Patched GiBUU!"
+	@echo "*********************************************************************"
+
+SlaveGiBUU:../GiBUUInstall/release1.6/bin/gibuu
+
+$(TARGET): $(TARGETSRC) $(HF) $(OBJS) $(LHPCLIB) $(LIBUTILS)
+	$(CXX) $< -o $@ $(CXXFLAGS) -I$(UTILSLOC) -I$(LHPCINC) $(OBJS) $(LHPCLD) $(LIBUTILSLD) $(LDFLAGS)
+
+%.o : %.cxx $(HF)
+	$(CXX) $(CXXFLAGS) -I$(UTILSLOC) -o $@ -c $<
+
+$(LIBUTILS):
+	cd $(UTILSLOC); $(MAKE)
 
 $(LHPCLIB):
 	cd $(LHPCROOT); $(MAKE)
@@ -53,4 +81,8 @@ latex_docs: docs
 clean:
 	rm -rf $(TARGET) GiBUUToStdHep_Utils.o GiRooTracker.o $(BDIR)
 	rm -rf dox/html dox/latex GiBUUToStdHep_dox.pdf
+
+distclean: clean
 	cd $(LHPCROOT); $(MAKE) clean
+	cd $(UTILSLOC); $(MAKE) clean
+	rm -rf ../GiBUUInstall;
