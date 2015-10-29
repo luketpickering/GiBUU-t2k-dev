@@ -56,6 +56,8 @@ all: $(TARGET)
 	@echo "*********************************************************************"
 	@echo "Success. Built Patched GiBUU!"
 	@echo "*********************************************************************"
+	@echo "To begin using this please re-source setup.sh"
+	@echo "Then test that gibuu is where you expect it by $ which gibuu"
 
 SlaveGiBUU:../GiBUUInstall/release1.6/bin/gibuu
 
