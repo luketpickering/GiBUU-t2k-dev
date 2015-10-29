@@ -29,6 +29,9 @@ struct GiRooTracker {
   ///\warning This is not a one-to-one mapping.
   Int_t GiBUU2NeutCode;
 
+  ///\brief The GiBUU interaction type.
+  Int_t GiBUUReactionCode;
+
   ///\brief The event number from the input event vector.
   ///
   ///\note This will not be unique between GiBUU runs but should be in a
@@ -59,13 +62,17 @@ struct GiRooTracker {
   ///\brief GiBUU history array, indices correspond to the StdHep arrays.
   Long_t* GiBHepHistory; //[StdHepN]
 
+  Int_t* GiBHepFather; //[StdHepN]
+  Int_t* GiBHepMother; //[StdHepN]
+  Int_t* GiBHepGeneration; //[StdHepN]
+
   ///\brief Function to reset an instance of this class to its default state.
   ///
   ///Used between fillings to result any values to default.
   void Reset();
 
   ///\brief Will add the relevant output branches to a given TTree.
-  void AddBranches(TTree* &tree);
+  void AddBranches(TTree* &tree, bool AddHistory=false);
 
 };
 #endif

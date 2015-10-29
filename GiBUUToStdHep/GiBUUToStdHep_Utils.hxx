@@ -12,6 +12,8 @@
 #include <vector>
 #include <iostream>
 
+#include "Rtypes.h"
+
 ///Utilities which may be helpful for processing GiBUU specific output.
 namespace GiBUUUtils {
 
@@ -23,6 +25,9 @@ namespace GiBUUUtils {
 ///Current codes converted:
 /// - GiBUU : PDG
 /// - 1 : p=2212, n=2112
+/// - 2 : Delta++=2224, Delta+=2214, Delta0=2114, Delta−=1114
+/// - 3 : P11(1440) PDGs: 202212, 202112
+/// - 7 : D13(1520) PDGs: 102214, 102114
 /// - 101 : pi+=211, pi0=111, pi-=-211
 /// - 901 : 11
 /// - 902 : 13
@@ -32,7 +37,10 @@ namespace GiBUUUtils {
 /// - 32 : 3122
 /// - 33 : 3222, 3212, 3112
 /// - 110 : K+=321, K0=311
-int GiBUUToPDG(int GiBUUCode, int GiBUUCharge);
+int GiBUUToPDG(int GiBUUCode, int GiBUUCharge=0);
+
+std::tuple<Int_t,Int_t,Int_t> DecomposeGiBUUHistory(Long_t HistCode);
+std::string WriteGiBUUHistory(Long_t HistCode);
 ///\brief Converts a GiBUU interaction code to the corresponding NEUT code
 ///where possible.
 ///
@@ -47,7 +55,12 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge);
 /// - 37 = 2pi
 ///
 ///From https://gibuu.hepforge.org/trac/wiki/LesHouches
-int GiBUU2NeutReacCode(int GiBUUCode, int PDG);
+int GiBUU2NeutReacCode(Int_t GiBUUCode,
+  Int_t const * const StdHepPDGArray,
+  Long_t const * const HistoryArray,
+  Int_t StdHepN,
+  bool IsCC=true,
+  Int_t StruckNucleonPosition=-1);
 
 }
 

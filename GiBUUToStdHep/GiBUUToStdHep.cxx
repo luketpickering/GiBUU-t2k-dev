@@ -249,6 +249,8 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
     giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
       GiBUUToStdHepOpts::TargetA;
 
+    giRooTracker->GiBUUReactionCode = ev.front().Prodid;
+
     giRooTracker->StdHepN = 2;
 
     for(auto const & part : ev){
@@ -273,17 +275,36 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
         [GiRooTracker::kStdHepIdxE] = part.FourMom.E();
 
       giRooTracker->GiBHepHistory[giRooTracker->StdHepN] = part.History;
-      giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(part.Prodid,
-        giRooTracker->StdHepPdg[giRooTracker->StdHepN]);
+      auto const & hDec = GiBUUUtils::DecomposeGiBUUHistory(part.History);
+      giRooTracker->GiBHepGeneration[giRooTracker->StdHepN] = std::get<0>(hDec);
+
+      if(std::get<1>(hDec) == -1){ //If this was produced by a 3 body process
+        giRooTracker->GiBHepMother[giRooTracker->StdHepN] = std::get<1>(hDec);
+        giRooTracker->GiBHepFather[giRooTracker->StdHepN] = std::get<2>(hDec);
+      } else {
+        giRooTracker->GiBHepMother[giRooTracker->StdHepN] =
+          GiBUUUtils::GiBUUToPDG(std::get<1>(hDec));
+        giRooTracker->GiBHepFather[giRooTracker->StdHepN] =
+          GiBUUUtils::GiBUUToPDG(std::get<2>(hDec));
+      }
 
       giRooTracker->StdHepN++;
     }
+
+    giRooTracker->GiBUU2NeutCode =
+      GiBUUUtils::GiBUU2NeutReacCode(giRooTracker->GiBUUReactionCode,
+      giRooTracker->StdHepPdg,
+      giRooTracker->GiBHepHistory,
+      giRooTracker->StdHepN,
+      true,
+      GiBUUToStdHepOpts::HaveStruckNucleonInfo?3:-1);
 
     if(GiBUUToStdHepOpts::Verbosity > 1){
       std::cout << "[INFO]: EvNo: " << EvNum
       << ", contained "
       << giRooTracker->StdHepN << " particles."
-      << "\n\tNeutConventionReactionCode: " <<
+      <<"\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
+      << ", NeutConventionReactionCode: " <<
         giRooTracker->GiBUU2NeutCode
       << "\n\t[Lep In] : "
       << TLorentzVector(
@@ -317,6 +338,11 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
           giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPz],
           giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxE])
         << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")" << std::endl;
+
+        std::cout << "\t\t"
+          << GiBUUUtils::WriteGiBUUHistory(
+            giRooTracker->GiBHepHistory[stdHepInd])
+          << std::endl;
       }
       std::cout << "\t[Lep Out]: "
       << TLorentzVector(
@@ -451,14 +477,17 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE] =
       ExtraInfo.ChargedLepton4Mom.E();
 
+    giRooTracker->GiBUUReactionCode = ExtraInfo.EvId;
+
     giRooTracker->StdHepN = 3;
 
     if(GiBUUToStdHepOpts::Verbosity > 1){
       std::cout << "\n[INFO]: EvNo: " << currentEvent.getEventNumberInFile()
       << ", contained "
       << (currentEvent.getNumberOfParticles()+3) << " particles."
-      << "\n\tNeutConventionReactionCode: " <<
-        GiBUUUtils::GiBUU2NeutReacCode(ExtraInfo.EvId,0)
+      << "\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
+      << ", NeutConventionReactionCode: " << "0" // Not dealing with LH
+                                                 //conversions at the moment.
       << "\n\t[Lep In] : " << ExtraInfo.Nu4Mom << std::endl;
       std::cout << "\t[Target]  : " << giRooTracker->StdHepPdg[1] << std::endl;
       if(GiBUUToStdHepOpts::HaveStruckNucleonInfo){
@@ -490,9 +519,7 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
       giRooTracker->StdHepP4[giRooTracker->StdHepN]\
         [GiRooTracker::kStdHepIdxE] = p.getEnergy();
 
-      giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
-        ExtraInfo.EvId,
-        giRooTracker->StdHepPdg[giRooTracker->StdHepN]);
+      giRooTracker->GiBUU2NeutCode = 0;
       giRooTracker->StdHepN++;
     }
 
@@ -524,7 +551,7 @@ int GiBUUToStdHep(){
 
   TTree* rooTrackerTree = new TTree("giRooTracker","GiBUU StdHepVariables");
   GiRooTracker* giRooTracker = new GiRooTracker();
-  giRooTracker->AddBranches(rooTrackerTree);
+  giRooTracker->AddBranches(rooTrackerTree,GiBUUToStdHepOpts::InpIsFE);
 
   int ParserRtnCode = 0;
   if(GiBUUToStdHepOpts::InpIsLH){
@@ -639,7 +666,7 @@ void SetOpts(){
     [&](){GiBUUToStdHepOpts::MaxEntries = -1;},
       "<Num Entries [<-1>: means all]> [default==-1]");
 
-  CLIArgs::AddOpt("-b", "--have-bosonic-info", false,
+  CLIArgs::AddOpt("-I", "--have-Initial-State", false,
     [&] (std::string const &opt) -> bool {
       GiBUUToStdHepOpts::HaveStruckNucleonInfo = true;
       return true;
