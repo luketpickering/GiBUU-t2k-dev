@@ -8,6 +8,11 @@ else
   SETUPDIR=$(readlink -f ${BASH_SOURCE%/*})
 fi
 
+if [[ ! -e utils/.git ]] || [[ ! -e LesHouchesParserClasses_CPP/.git ]]; then
+  git submodule init
+  git submodule update
+fi
+
 if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUToStdHep/bin:"* ]]; then
   export PATH=${SETUPDIR}/GiBUUToStdHep/bin:$PATH
 fi
