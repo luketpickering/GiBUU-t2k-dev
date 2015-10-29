@@ -62,9 +62,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge){
           return 111112;
         }
         default:{
-          std::cout << "[WARN]: Delta resonance had an odd charge: "
+          std::cout << "[WARN]: S31(1620) resonance had an odd charge: "
             << GiBUUCharge << std::endl;
-          return 2114;
+          return 111112;
         }
       }
     }
