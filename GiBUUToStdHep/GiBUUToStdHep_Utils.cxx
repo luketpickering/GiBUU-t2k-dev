@@ -78,13 +78,16 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge){
         << std::endl;
       return 3222;
     }
-    case 110:{
-      if(GiBUUCharge){return (GiBUUCharge>0)?321:-321;}
-      return 311;
-    }
     case 101:{
       if(GiBUUCharge){ return(GiBUUCharge>0)?211:-211; }
       return 111;
+    }
+    case 104:{
+      return 9000221;
+    }
+    case 110:{
+      if(GiBUUCharge){return (GiBUUCharge>0)?321:-321;}
+      return 311;
     }
     case 901:{
       return (GiBUUCharge<0)?11:-11;
@@ -134,7 +137,7 @@ std::tuple<Int_t,Int_t,Int_t> DecomposeGiBUUHistory(Long_t HistCode){
 std::string WriteGiBUUHistory(Long_t HistCode){
   std::stringstream ss("");
   if(!HistCode){
-    ss << "[Elementary interaction FS]";
+    ss << "[Elementary interaction]";
   } else {
     auto const & hDec = GiBUUUtils::DecomposeGiBUUHistory(HistCode);
 
@@ -368,12 +371,12 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode,
             NucleonPDG, Warn);
           if(rMode) {
             if(Warn){ //If theres something fishy then shout about it
-              std::cout << "[WARN]: Returning potentially dodgey (mode:0) "
-                << "NEUT Code: " << rMode << " (Found Nucleon: "
-                << NucleonPDG << ")." << std::endl;
-              std::cout << "        It came from the event: " << std::endl;
-              PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-                StdHepN,"\t|");
+              // std::cout << "[WARN]: Returning potentially dodgey (mode:0) "
+              //   << "NEUT Code: " << rMode << " (Found Nucleon: "
+              //   << NucleonPDG << ")." << std::endl;
+              // std::cout << "        It came from the event: " << std::endl;
+              // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
+              //   StdHepN,"\t|");
             }
             return rMode;
           }
@@ -384,10 +387,10 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode,
           GetFSDecayPions(StdHepPDGArray, HistoryArray, StdHepN);
         for(auto const & decayPi : FSDP){ //Try first to make sure it is from
           if(std::get<2>(decayPi) != 2){  //a Delta
-            std::cout << "[WARN]: Had a GiBUU mode 2 which resulted in decay "
-              << "pions. Their decay parent, " << std::get<2>(decayPi)
-              << ", was not a Delta though."
-              << std::endl;
+            // std::cout << "[WARN]: Had a GiBUU mode 2 which resulted in decay "
+            //   << "pions. Their decay parent, " << std::get<2>(decayPi)
+            //   << ", was not a Delta though."
+            //   << std::endl;
               if(std::get<2>(decayPi) == 102 || std::get<2>(decayPi) == 104){
                 return 21;
               }
@@ -410,12 +413,12 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode,
             SameGenNucleon, Warn);
           if(rMode) {
             if(Warn){ //If theres something fishy then shout about it
-              std::cout << "[WARN]: Returning potentially dodgey (mode:1) "
-                << "NEUT Code: " << rMode << " (Found Same generation Nucleon: "
-                << SameGenNucleon << ")." << std::endl;
-              std::cout << "        It came from the event: " << std::endl;
-              PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-                StdHepN,"\t|");
+              // std::cout << "[WARN]: Returning potentially dodgey (mode:1) "
+              //   << "NEUT Code: " << rMode << " (Found Same generation Nucleon: "
+              //   << SameGenNucleon << ")." << std::endl;
+              // std::cout << "        It came from the event: " << std::endl;
+              // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
+              //   StdHepN,"\t|");
             }
             return rMode;
           }
@@ -440,12 +443,12 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode,
           Int_t rMode = PionPDGToNeutResMode(std::get<1>(decayPi),
             SameGenNucleon, Warn);
           if(rMode) {
-            std::cout << "[WARN]: Returning potentially dodgey (mode:2) "
-              << "NEUT Code: " << rMode << " (Found Nucleon probably from same "
-              << "decay: " << SameGenNucleon << ")." << std::endl;
-            std::cout << "        It came from the event: " << std::endl;
-            PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-              StdHepN,"\t|");
+            // std::cout << "[WARN]: Returning potentially dodgey (mode:2) "
+            //   << "NEUT Code: " << rMode << " (Found Nucleon probably from same "
+            //   << "decay: " << SameGenNucleon << ")." << std::endl;
+            // std::cout << "        It came from the event: " << std::endl;
+            // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
+            //   StdHepN,"\t|");
             return rMode;
           }
         }
@@ -457,11 +460,11 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode,
           NucleonPDG = gxparts.size()?std::get<1>(gxparts.front()):0;
         }
 
-        std::cout << "\nGiving up on this Delta resonance, returning: "
-          << ((NucleonPDG==2212)?10:9) << " (Found Nucleon: "
-          << NucleonPDG << ")." << std::endl;
-        PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-              StdHepN,"\t+");
+        // std::cout << "\nGiving up on this Delta resonance, returning: "
+        //   << ((NucleonPDG==2212)?10:9) << " (Found Nucleon: "
+        //   << NucleonPDG << ")." << std::endl;
+        // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
+        //       StdHepN,"\t+");
         return (NucleonPDG==2212)?10:9;
 
       }

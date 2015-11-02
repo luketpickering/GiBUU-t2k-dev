@@ -189,7 +189,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
         throw 5;
       }
       LineNum++;
-      std::cout << "[LINE:" << LineNum << "]: " << line << std::endl;
+      // std::cout << "[LINE:" << LineNum << "]: " << line << std::endl;
     }
     auto const & part = GetParticleLine(line);
     if((part.EvNum != LastEvNum) && LastEvNum){
@@ -257,7 +257,8 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
 
       if( GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
           (giRooTracker->StdHepN == 3) ){
-        giRooTracker->StdHepPdg[giRooTracker->StdHepN] = 0;
+        giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
+          GiBUUUtils::GiBUUToPDG(part.ID,part.Charge);
         giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
       } else {
         giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
