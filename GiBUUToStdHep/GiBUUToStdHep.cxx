@@ -92,6 +92,12 @@ long MaxEntries;
 ///  `GiBUUToStdHep.exe ... -v xx ...'
 int Verbosity = 0;
 
+///\brief Whether to produce NuWro flavor StdHep output.
+bool EmulateNuWro = false;
+
+///\brief Whether to remove events which have a zero weight.
+bool SaveNoWeight = true;
+
 }
 
 struct GiBUUPartBlob {
@@ -218,6 +224,14 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
     giRooTracker->Reset();
 
     int const & EvNum = ev.front().EvNum;
+
+    if(!EvNum){ // Malformed line
+      if(GiBUUToStdHepOpts::Verbosity){
+        std::cout << "Skipping event due to malformed line." << std::endl;
+      }
+      continue;
+    }
+
     if(!(NumEvs%1000) && GiBUUToStdHepOpts::Verbosity){
       std::cout << "Read " << NumEvs << " events." << std::endl;
     }
@@ -227,12 +241,16 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
         << std::endl;
       break;
     }
+    //Skip very low weight events.
+    if(!GiBUUToStdHepOpts::SaveNoWeight && ev.front().PerWeight < 1E-12){
+      continue;
+    }
 
     giRooTracker->EvtNum = EvNum;
 
     //neutrino
     giRooTracker->StdHepPdg[0] = GiBUUToStdHepOpts::nuType;
-    giRooTracker->StdHepStatus[0] = -1;
+    giRooTracker->StdHepStatus[0] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] = ev.front().Enu;
@@ -242,29 +260,58 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
     giRooTracker->StdHepPdg[1] =
       PGUtils::MakeNuclearPDG(GiBUUToStdHepOpts::TargetZ,
                                  GiBUUToStdHepOpts::TargetA);
-    giRooTracker->StdHepStatus[1] = -1;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
-      GiBUUToStdHepOpts::TargetA;
+    giRooTracker->StdHepStatus[1] = 0;
+    if(!GiBUUToStdHepOpts::EmulateNuWro){
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
+        GiBUUToStdHepOpts::TargetA;
+    }
 
     giRooTracker->GiBUUReactionCode = ev.front().Prodid;
-
+    giRooTracker->GiBUUPerWeight = ev.front().PerWeight;
     giRooTracker->StdHepN = 2;
 
+
+    bool BadEv = false;
     for(auto const & part : ev){
 
-      if( GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
-          (giRooTracker->StdHepN == 3) ){
-        giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
-          GiBUUUtils::GiBUUToPDG(part.ID,part.Charge);
-        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
-      } else {
-        giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
-          GiBUUUtils::GiBUUToPDG(part.ID,part.Charge);
-        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1;
+      if(!part.EvNum){ // Malformed line
+        if(GiBUUToStdHepOpts::Verbosity){
+          std::cout << "Skipping event due to malformed line." << std::endl;
+        }
+        BadEv = true;
+        break;
       }
+
+      //Struck nucleon handling depends on output format
+      if( GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
+          (giRooTracker->StdHepN == 3) &&
+          (GiBUUToStdHepOpts::EmulateNuWro&&(!giRooTracker->StruckNucleonPDG))){
+
+        giRooTracker->StruckNucleonPDG =
+          GiBUUUtils::GiBUUToPDG(part.ID,part.Charge);
+        giRooTracker->StdHepStatus[1] = 0;
+        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] =
+          part.FourMom.X();
+        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] =
+          part.FourMom.Y();
+        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] =
+          part.FourMom.Z();
+        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
+          part.FourMom.E();
+        continue;
+
+      } else if( GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
+                 (giRooTracker->StdHepN == 3) ){ // Struck nucleon status if not
+        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;// in NuWro mode.
+      } else {
+        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1; //All other FS
+      }                                                        //should be good.
+
+      giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
+        GiBUUUtils::GiBUUToPDG(part.ID,part.Charge);
 
       giRooTracker->StdHepP4[giRooTracker->StdHepN]\
         [GiRooTracker::kStdHepIdxPx] = part.FourMom.X();
@@ -288,22 +335,37 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
         giRooTracker->GiBHepFather[giRooTracker->StdHepN] =
           GiBUUUtils::GiBUUToPDG(std::get<2>(hDec));
       }
-
       giRooTracker->StdHepN++;
     }
 
-    giRooTracker->GiBUU2NeutCode =
-      GiBUUUtils::GiBUU2NeutReacCode(giRooTracker->GiBUUReactionCode,
-      giRooTracker->StdHepPdg,
-      giRooTracker->GiBHepHistory,
-      giRooTracker->StdHepN,
-      true,
-      GiBUUToStdHepOpts::HaveStruckNucleonInfo?3:-1);
+    if(BadEv){ continue; } // If we broke then don't bother continuing
+                           // processing.
+
+    if(GiBUUToStdHepOpts::EmulateNuWro&&
+      GiBUUToStdHepOpts::HaveStruckNucleonInfo&&
+      (giRooTracker->GiBUUReactionCode==2)&&
+      (giRooTracker->StruckNucleonPDG==2212) ){
+      giRooTracker->GiBUU2NeutCode = 11; // Special case that we know.
+    } else { //Try the heuristics.
+      giRooTracker->GiBUU2NeutCode =
+        GiBUUUtils::GiBUU2NeutReacCode(giRooTracker->GiBUUReactionCode,
+        giRooTracker->StdHepPdg,
+        giRooTracker->GiBHepHistory,
+        giRooTracker->StdHepN,
+        true,
+        GiBUUToStdHepOpts::HaveStruckNucleonInfo?3:-1);
+    }
+
+    std::stringstream ss("");
+    ss << giRooTracker->GiBUU2NeutCode;
+    giRooTracker->EvtCode->SetString(ss.str().c_str());
 
     if(GiBUUToStdHepOpts::Verbosity > 1){
       std::cout << "[INFO]: EvNo: " << EvNum
       << ", contained "
-      << giRooTracker->StdHepN << " particles."
+      << giRooTracker->StdHepN << " (" << ev.size() << ") particles. "
+      "Event Weight: "
+      << std::setprecision(3) << giRooTracker->GiBUUPerWeight
       <<"\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
       << ", NeutConventionReactionCode: " <<
         giRooTracker->GiBUU2NeutCode
@@ -314,24 +376,38 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
           giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
           giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE])
        << std::endl;
-       std::cout << "\t[Target]  : " << giRooTracker->StdHepPdg[1] << std::endl;
+       std::cout << "\t[Target] : " << giRooTracker->StdHepPdg[1] << std::endl;
       if(GiBUUToStdHepOpts::HaveStruckNucleonInfo){
-        std::cout << "\t[Nuc In] : "
-        << TLorentzVector(
-          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
-          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
-          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
-          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
-        << std::endl;
+        if(GiBUUToStdHepOpts::EmulateNuWro){
+          std::cout << "\t[Nuc In] : "
+            << TLorentzVector(
+              giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx],
+              giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy],
+              giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz],
+              giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE])
+            << " (" << std::setw(4) << giRooTracker->StruckNucleonPDG << ")"
+            << std::endl;
+        } else {
+          std::cout << "\t[Nuc In] : "
+          << TLorentzVector(
+            giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
+            giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
+            giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
+            giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
+            << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")"
+            << std::endl;
+        }
       }
 
       //We have already printed the struck nucleon
-      for(Int_t stdHepInd = (GiBUUToStdHepOpts::HaveStruckNucleonInfo)?4:3;
+      Int_t StartPoint = ((!GiBUUToStdHepOpts::HaveStruckNucleonInfo)? 3 :
+                                    (GiBUUToStdHepOpts::EmulateNuWro?3:4));
+      for(Int_t stdHepInd = StartPoint;
         stdHepInd < giRooTracker->StdHepN;
         ++stdHepInd){
 
         std::cout << "\t[" << std::setw(2)
-          << (stdHepInd-((GiBUUToStdHepOpts::HaveStruckNucleonInfo)?4:3))
+          << (stdHepInd-(StartPoint))
           << "](" << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd] << ")"
           << TLorentzVector(
           giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPx],
@@ -356,6 +432,9 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker){
     OutputTree->Fill();
     NumEvs++;
   }
+  std::cout << "[INFO]: Saved: " << NumEvs << " events, skipped: "
+    << (Events.size() - NumEvs) << " because of low weight"
+    << (((Events.size() - NumEvs)>1)?"s":"") << "." << std::endl;
   return 0;
 }
 
@@ -426,8 +505,6 @@ LHAdditionInfoLine ParseAdditionInfoLine(std::string const &optLine){
   return info;
 }
 
-
-
 int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
   int EvNum = 0;
   LHPC::LhefParser LHEFParser(GiBUUToStdHepOpts::InpFName,true);
@@ -451,6 +528,8 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker){
       ExtraInfo.Nu4Mom.Z();
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] =
       ExtraInfo.Nu4Mom.E();
+
+    giRooTracker->GiBUUPerWeight = ExtraInfo.EvWeight;
 
     //target
     giRooTracker->StdHepPdg[1] =
@@ -550,9 +629,13 @@ int GiBUUToStdHep(){
     return 2;
   }
 
-  TTree* rooTrackerTree = new TTree("giRooTracker","GiBUU StdHepVariables");
+  TTree* rooTrackerTree =
+    new TTree(GiBUUToStdHepOpts::EmulateNuWro?"nRooTracker":"giRooTracker",
+      "GiBUU StdHepVariables");
   GiRooTracker* giRooTracker = new GiRooTracker();
-  giRooTracker->AddBranches(rooTrackerTree,GiBUUToStdHepOpts::InpIsFE);
+  giRooTracker->AddBranches(rooTrackerTree,GiBUUToStdHepOpts::InpIsFE,
+    GiBUUToStdHepOpts::EmulateNuWro&&GiBUUToStdHepOpts::HaveStruckNucleonInfo,
+    GiBUUToStdHepOpts::EmulateNuWro);
 
   int ParserRtnCode = 0;
   if(GiBUUToStdHepOpts::InpIsLH){
@@ -670,10 +753,29 @@ void SetOpts(){
   CLIArgs::AddOpt("-I", "--have-Initial-State", false,
     [&] (std::string const &opt) -> bool {
       GiBUUToStdHepOpts::HaveStruckNucleonInfo = true;
+      std::cout << "\t--Attempting to read Initial State Info." << std::endl;
       return true;
     }, false,
     [&](){GiBUUToStdHepOpts::HaveStruckNucleonInfo = false;},
       "Have struck nucleon information in GiBUU output.");
+
+  CLIArgs::AddOpt("-E", "--Emulate-NuWro", false,
+    [&] (std::string const &opt) -> bool {
+      GiBUUToStdHepOpts::EmulateNuWro = true;
+      return true;
+      std::cout << "\t--Outputting in NuWro flavor StdHep." << std::endl;
+    }, false,
+    [&](){GiBUUToStdHepOpts::EmulateNuWro = false;},
+      "Emulate NuWro StdHep Flavor.");
+
+  CLIArgs::AddOpt("-S", "--Save-No-Weight", false,
+    [&] (std::string const &opt) -> bool {
+      GiBUUToStdHepOpts::SaveNoWeight = true;
+      return true;
+      std::cout << "\t--Not saving events with 0 weight." << std::endl;
+    }, false,
+    [&](){GiBUUToStdHepOpts::SaveNoWeight = false;},
+      "Save events that have a weight of 0.");
 }
 
 int main(int argc, char const *argv[]){

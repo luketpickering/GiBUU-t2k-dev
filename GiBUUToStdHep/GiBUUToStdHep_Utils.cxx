@@ -349,6 +349,9 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode,
     switch(GiBUUCode){
       case 1: { return 1; } // QE
       case 2:{
+
+        if(StdHepPDGArray[StruckNucleonPosition]==2212){return 11;}
+
         //RESONANCE HEURISTICS
         auto const &g1parts = GetGenNParticles(1,StdHepPDGArray,
           HistoryArray,StdHepN);

@@ -29,6 +29,9 @@ struct GiRooTracker {
   ///\warning This is not a one-to-one mapping.
   Int_t GiBUU2NeutCode;
 
+  ///Generator-specific string with 'event code'.
+  TObjString* EvtCode;
+
   ///\brief The GiBUU interaction type.
   Int_t GiBUUReactionCode;
 
@@ -66,13 +69,21 @@ struct GiRooTracker {
   Int_t* GiBHepMother; //[StdHepN]
   Int_t* GiBHepGeneration; //[StdHepN]
 
+  ///\brief Weighting which should be assigned to this event.
+  Double_t GiBUUPerWeight;
+
+  ///\brief Struck Nucleon PDG code which is turned on when emulating NuWro so
+  ///as not to lose information.
+  Int_t StruckNucleonPDG;
+
   ///\brief Function to reset an instance of this class to its default state.
   ///
   ///Used between fillings to result any values to default.
   void Reset();
 
   ///\brief Will add the relevant output branches to a given TTree.
-  void AddBranches(TTree* &tree, bool AddHistory=false);
+  void AddBranches(TTree* &tree, bool AddHistory=false,
+    bool AddStruckNucleonPDG=false, bool EmulateNuWro=false);
 
 };
 #endif
