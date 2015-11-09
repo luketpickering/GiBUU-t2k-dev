@@ -3,4 +3,5 @@
 	url = git@github.com:benoleary/LesHouchesParserClasses_CPP.git
 [submodule "utils"]
 	path = utils
-	url = git@github.com:luketpickering/lukes-utils.git
+	url = git@ursaminorbeta.org.uk:luketpickering/lukes-utils.git
+	branch = stable
