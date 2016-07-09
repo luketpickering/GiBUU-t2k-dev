@@ -22,9 +22,9 @@ LHPCINC :=$(LHPCROOT)/include
 LHPCLIB :=$(LHPCROOT)/lib/libLHPC.a
 LHPCLD := -L$(LHPCROOT)/lib -lLHPC
 
-UTILSLOC := ../utils
-LIBUTILS := $(UTILSLOC)/lib/libPureGenUtils.a
-LIBUTILSLD := -L$(UTILSLOC)/lib  -lPureGenUtils
+UTILSLOC := ../utils/build/`uname`
+UTILSINC := $(UTILSLOC)/include
+LIBUTILSLD := -L$(UTILSLOC)/lib  -lLUtils
 
 .PHONY: all clean distclean
 
@@ -40,35 +40,55 @@ all: $(TARGET)
 	mkdir -p ../GiBUUInstall;
 	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/release1.6 ./release1.6
 
-../GiBUUInstall/buuinput:
+../GiBUUInstall/release2016:
 	mkdir -p ../GiBUUInstall;
-	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/buuinput1.6 ./buuinput
+	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/release2016 ./release2016
+
+../GiBUUInstall/buuinput_1_6:
+	mkdir -p ../GiBUUInstall;
+	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/buuinput1.6 ./buuinput_1_6
+
+../GiBUUInstall/buuinput_2016:
+	mkdir -p ../GiBUUInstall;
+	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/buuinput2016 ./buuinput_2016
 
 ../GiBUUInstall/release1.6/InitialStateInfo.patched: ../GiBUUInstall/release1.6
 	cd ../GiBUUInstall; patch -p0 < ../AddInitStateInfo_fixed.patch
 	touch $@
 
+../GiBUUInstall/release2016/InitialStateInfo.patched: ../GiBUUInstall/release2016
+	cd ../GiBUUInstall; patch -p0 < ../AddInitStateInfo_fixed_2016.patch
+	touch $@
 
-../GiBUUInstall/release1.6/bin/gibuu: ../GiBUUInstall/release1.6/InitialStateInfo.patched ../GiBUUInstall/buuinput
+
+../GiBUUInstall/release1.6/bin/gibuu: ../GiBUUInstall/release1.6/InitialStateInfo.patched ../GiBUUInstall/buuinput_1_6
 	cd ../GiBUUInstall/release1.6; $(MAKE)
 	cd ../GiBUUInstall/release1.6; mkdir -p bin; cp objects/GiBUU.x bin/gibuu;
 	@echo ""
 	@echo "*********************************************************************"
-	@echo "Success. Built Patched GiBUU!"
+	@echo "Success. Built Patched GiBUU 1.6!"
 	@echo "*********************************************************************"
 	@echo "To begin using this please re-source setup.sh"
 	@echo "Then test that gibuu is where you expect it by $ which gibuu"
 
-SlaveGiBUU:../GiBUUInstall/release1.6/bin/gibuu
+../GiBUUInstall/release2016/bin/gibuu: ../GiBUUInstall/release2016/InitialStateInfo.patched ../GiBUUInstall/buuinput_2016
+	cd ../GiBUUInstall/release2016; $(MAKE)
+	cd ../GiBUUInstall/release2016; mkdir -p bin; cp objects/GiBUU.x bin/gibuu;
+	@echo ""
+	@echo "*********************************************************************"
+	@echo "Success. Built Patched GiBUU 2016!"
+	@echo "*********************************************************************"
+	@echo "To begin using this please re-source setup.sh"
+	@echo "Then test that gibuu is where you expect it by $ which gibuu"
 
-$(TARGET): $(TARGETSRC) $(HF) $(OBJS) $(LHPCLIB) $(LIBUTILS)
-	$(CXX) $< -o $@ $(CXXFLAGS) -I$(UTILSLOC) -I$(LHPCINC) $(OBJS) $(LHPCLD) $(LIBUTILSLD) $(LDFLAGS)
+SlaveGiBUU_1_6:../GiBUUInstall/release1.6/bin/gibuu
+SlaveGiBUU_2016:../GiBUUInstall/release2016/bin/gibuu
+
+$(TARGET): $(TARGETSRC) $(HF) $(OBJS) $(LHPCLIB)
+	$(CXX) $< -o $@ $(CXXFLAGS) -I$(UTILSINC) -I$(LHPCINC) $(OBJS) $(LHPCLD) $(LIBUTILSLD) $(LDFLAGS)
 
 %.o : %.cxx $(HF)
-	$(CXX) $(CXXFLAGS) -I$(UTILSLOC) -o $@ -c $<
-
-$(LIBUTILS):
-	cd $(UTILSLOC); $(MAKE)
+	$(CXX) $(CXXFLAGS) -I$(UTILSINC) -o $@ -c $<
 
 $(LHPCLIB):
 	cd $(LHPCROOT); $(MAKE)
@@ -86,5 +106,4 @@ clean:
 
 distclean: clean
 	cd $(LHPCROOT); $(MAKE) clean
-	cd $(UTILSLOC); $(MAKE) clean
 	rm -rf ../GiBUUInstall;

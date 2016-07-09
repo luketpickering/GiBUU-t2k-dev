@@ -4,4 +4,3 @@
 [submodule "utils"]
 	path = utils
 	url = git@git.ursaminorbeta.org.uk:luketpickering/lukes-utils.git
-	branch = stable
