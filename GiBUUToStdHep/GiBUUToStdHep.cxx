@@ -141,11 +141,18 @@ std::ostream &operator<<(std::ostream &os, GiBUUPartBlob const &part) {
 GiBUUPartBlob GetParticleLine(std::string const &line) {
   GiBUUPartBlob pblob;
 
-  auto const &splitLine = Utils::SplitStringByDelim(line, " ");
-  if (splitLine.size() != 15) {
-    std::cout << "[WARN]: Event had malformed particle line: \"" << line << "\""
-              << std::endl;
-    return pblob;
+  std::vector<std::string> splitLine = Utils::SplitStringByDelim(line, " ");
+  if (splitLine.size() != 15) { // try to fix known parsing error
+    std::string ln = Utils::Replace(line, "E-", "XXXXX");
+    ln = Utils::Replace(ln, "-", " -");
+    ln = Utils::Replace(ln, "XXXXX", "E-");
+
+    splitLine = Utils::SplitStringByDelim(ln, " ");
+    if(splitLine.size() != 15){
+      std::cout << "[WARN]: Event had malformed particle line: \"" << line << "\""
+          << std::endl;
+      return pblob;
+    }
   }
 
   try {
@@ -629,7 +636,7 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
 }
 
 int GiBUUToStdHep() {
-  TFile *outFile = new TFile(GiBUUToStdHepOpts::OutFName.c_str(), "CREATE");
+  TFile *outFile = new TFile(GiBUUToStdHepOpts::OutFName.c_str(), "RECREATE");
   if (!outFile->IsOpen()) {
     std::cout << "Couldn't open output file." << std::endl;
     return 2;
@@ -727,7 +734,7 @@ void SetOpts() {
                     GiBUUToStdHepOpts::IsNC = true;
                     return true;
                   },
-                  true, []() {}, "<Input is NC events>");
+                  false, []() {}, "<Input is NC events>");
 
   CLIArgs::AddOpt("-a", "--target-a", true,
                   [&](std::string const &opt) -> bool {
