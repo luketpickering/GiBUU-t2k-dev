@@ -936,7 +936,8 @@ void SetOpts() {
                     }
                     std::cout << "\t--Assigning overall weight: " << ival
                               << std::endl;
-                    GiBUUToStdHepOpts::OverallWeight = ival return true;
+                    GiBUUToStdHepOpts::OverallWeight = ival;
+                    return true;
                   },
                   false, []() {}, "[i]<Next file extra weight [1.0/]'W'>");
 
