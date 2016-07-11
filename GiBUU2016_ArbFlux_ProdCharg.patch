@@ -1,0 +1,464 @@
+diff -urw -x 'Makefile*' ./release2016/code/analysis/AnaEvent.f90 ./release2016/code/analysis/AnaEvent.f90
+--- ./release2016/code/analysis/AnaEvent.f90	2016-07-11 11:30:52.598002611 +0100
++++ ./release2016/code/analysis/AnaEvent.f90	2016-07-11 11:28:06.000848774 +0100
+@@ -2124,7 +2124,7 @@
+     integer, intent(in), optional :: specificEvent
+
+     type(histogram) :: dsigma_dEnu, dsigma_dE,dsigma_dcos, dsigma_dQ2
+-    integer :: j, prod_id
++    integer :: j, prod_id, prod_chrg
+     character(80) :: filename_Enu, filename_E,filename_cos,filename_Q2
+     character(13) :: name
+     real :: enu,  ekin, costheta, Q2, perweight
+@@ -2212,7 +2212,8 @@
+        end if
+
+        if (pass) then
+-          if(.not.neutrinoProdInfo_Get(j,prod_id,perweight,lepIn_mom,lep_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
++          if(.not.neutrinoProdInfo_Get(j,prod_id,prod_chrg,perweight, &
++              & lepIn_mom,lep_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
+              write(*,*) 'error in getting perweight, stop'
+              write(*,*) j,prod_id,perweight
+              stop
+@@ -2421,10 +2422,10 @@
+     logical, optional              :: onlyFreeParticles
+     logical, optional              :: writeNeutrinoProdID
+     type(tParticleListNode),Pointer  :: pNode
+-    character(30),parameter :: out='(4I7,8E14.6,I11,I4,E14.6)'
++    character(30),parameter :: out='(4I7,8E14.6,I11,I4,E14.6,I9)'
+     character(30),parameter :: outShort='(4I7,8E14.6,I11,I4)'
+-    character(35),parameter :: outA='("#",A6,3A9,8A16,A15,A18,A8)'
+-    integer :: i, prod_ID, Chrg_Nuc
++    character(35),parameter :: outA='("#",A6,3A9,8A16,A15,A18,A8,A15)'
++    integer :: i, prod_ID, prod_chrg, Chrg_Nuc
+     real :: perweight, enu
+     real, dimension(0:3) :: lepIn_mom, lepton_mom, boson_mom, nuc_mom
+     logical :: newline,onlyFree,printParticle,ex,NeutrinoProdID
+@@ -2452,7 +2453,7 @@
+                      & '7:position(2)','8:position(3)',&
+                      & '9:momentum(0)', '10:momentum(1)','11:momentum(2)','12:momentum(3)', &
+                      & '13:history', '14:production_ID', &
+-                     & '15:enu'
++                     & '15:enu', '16:production_charge'
+     end if
+
+     newline=.false.
+@@ -2473,14 +2474,14 @@
+           end if
+
+           if(NeutrinoProdID) then
+-             if(.not.neutrinoProdInfo_Get(i,prod_id,perweight,lepIn_mom,lepton_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
++             if(.not.neutrinoProdInfo_Get(i,prod_id,prod_chrg,perweight,lepIn_mom,lepton_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
+                 write(*,*) 'error in getting production info in event_dump, stop'
+                 stop
+              end if
+              enu=lepton_mom(0)+boson_mom(0)
+              if(printParticle) write(47,out) run,i,pNode%V%ID,pNode%V%Charge,pNode%V%perweight, &
+                   &  pNode%V%position,pNode%V%momentum &
+-                  & ,pNode%V%history,prod_id, enu
++                  & ,pNode%V%history,prod_id, enu, prod_chrg
+           else
+              if(printParticle) write(47,outShort) run,i,pNode%V%ID,pNode%V%Charge, &
+                   &  pNode%V%perweight,pNode%V%position &
+@@ -3036,7 +3037,7 @@
+                     & filename_Enurestored_versusEnu, filename_dSigdEnu, &
+                     &  filename_dSigdEnurestored ! file names to write to
+     type(tParticleListNode),Pointer       :: pNode
+-    integer :: prod_id
++    integer :: prod_id, prod_chrg
+     real    :: Ehad, perweight
+     real, dimension(0:3) :: lepIn_mom, lep_mom, boson_mom, nuc_mom
+     integer :: Chrg_Nuc
+@@ -3084,7 +3085,8 @@
+
+        ! (1) Collect informations about boson in event "i"
+        ! event:  prod_ID (1 to 34) , perweight, outgoing lepton and intermediate boson momenta
+-       if(.not.neutrinoProdInfo_Get(i,prod_id,perweight,lepIn_mom,lep_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
++       if(.not.neutrinoProdInfo_Get(i,prod_id,prod_chrg,perweight,lepIn_mom, &
++          & lep_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
+           write(*,*) 'error in getting production info, stop'
+           stop
+        end if
+diff -urw -x 'Makefile*' ./release2016/code/analysis/neutrinoAnalysis.f90 ./release2016/code/analysis/neutrinoAnalysis.f90
+--- ./release2016/code/analysis/neutrinoAnalysis.f90	2016-07-11 11:30:52.599085895 +0100
++++ ./release2016/code/analysis/neutrinoAnalysis.f90	2016-07-11 11:29:01.579814589 +0100
+@@ -1229,7 +1229,7 @@
+     type(particle), Allocatable, dimension(:),target :: lepton, struckNuc
+
+     integer, parameter :: max_generation=3
+-    integer :: generation, prod_id
++    integer :: generation, prod_id, prod_chrg
+
+
+     real  :: dPhi   ! Delta(phi) for dsigma/dOmega
+@@ -1747,7 +1747,9 @@
+                      (/0.,0./),(/maxEnu,maxEnu/),  (/binsizeEnu,binsizeEnu/))
+
+                 ! oscillations:  nu_mu survival, nu_e appearence
+-                if (OSC(nuEXP)) then
++                if(nuEXP.eq.-1) then
++                  ! Don't try and oscillate input flux files.
++                else if (OSC(nuEXP)) then
+                    call CreateHist(Oscmumu_enu_real(m,iHist), &
+                         'nu_mu survival versus true energy',0.,maxEnu,binsizeEnu)
+                    call CreateHist(Oscmumu_enu_rec(m,iHist) , &
+@@ -1851,7 +1853,8 @@
+    ! process for particle j in ensemble i
+
+           if(.not.neutrinoProdInfo_Get(Particles(i,j)%firstEvent,prod_id,&
+-                                       dummy,lepIn_mom,lep_mom,boson_mom, nuc_mom, Chrg_Nuc)) then
++              & prod_chrg, dummy,lepIn_mom,lep_mom,boson_mom, nuc_mom, &
++              & Chrg_Nuc)) then
+              call TRACEBACK('error in getting production info')
+           end if
+
+@@ -2078,8 +2081,9 @@
+     do i=firstEvents(1),firstEvents(2)
+        lepton(i)%firstEvent=i
+        call get_init_namelist(outLepton_ID=lepton(i)%ID, outLepton_charge=lepton(i)%charge)
+-       if(.not.neutrinoProdInfo_Get(i, prod_id,lepton(i)%perweight,lepIn_mom, &
+-          lepton(i)%momentum,boson_mom, struckNuc(i)%momentum,struckNuc(i)%charge)) then
++       if(.not.neutrinoProdInfo_Get(i, prod_id, prod_chrg, lepton(i)%perweight,&
++          & lepIn_mom, lepton(i)%momentum,boson_mom, struckNuc(i)%momentum, &
++          & struckNuc(i)%charge)) then
+           call TRACEBACK('error in getting perweight')
+        end if
+
+@@ -2126,7 +2130,7 @@
+        case(37)
+           call event_add(events_2piBG(i),particlePointer)
+        case default
+-          write(*,*) 'prod_id =', prod_id
++          write(*,*) 'prod_id =', prod_id, 'prod_chrg = ', prod_chrg
+           call TRACEBACK('strange prod_id')
+        end select
+
+@@ -2177,7 +2181,8 @@
+
+           !apply history information
+           generation=history_getGeneration(Particles(i,j)%history)
+-          if(.not.neutrinoProdInfo_Get(Particles(i,j)%firstEvent,prod_id,dummy,lepIn_mom, &
++          if(.not.neutrinoProdInfo_Get(Particles(i,j)%firstEvent,prod_id, &
++              prod_chrg, dummy,lepIn_mom, &
+                                        lep_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
+              call TRACEBACK('error in getting production info')
+           end if
+@@ -2208,7 +2213,7 @@
+           case(37)
+              call event_add(events_2piBG(first),particlePointer)
+           case default
+-             write(*,*) 'prod_id =', prod_id
++             write(*,*) 'prod_id =', prod_id, 'prod_chrg = ', prod_chrg
+              call TRACEBACK('strange prod_id')
+           end select
+
+@@ -2899,7 +2904,8 @@
+     if(reconstruct_neutrino_energy .and. specificEvent_Analysis) then
+
+        do j=lBound(events,dim=1),uBound(events,dim=1)
+-          if(.not.neutrinoProdInfo_Get(j,prod_id,perweight,lepIn_mom,lep_mom,boson_mom,nuc_mom,Chrg_Nuc)) then
++          if(.not.neutrinoProdInfo_Get(j, prod_id, prod_chrg, perweight, &
++              & lepIn_mom, lep_mom, boson_mom, nuc_mom, Chrg_Nuc)) then
+              write(*,*) j,prod_id,perweight
+              call TRACEBACK('error in getting perweight, stop')
+           end if
+@@ -2950,7 +2956,9 @@
+
+              !! add oscillated muon disappearance  H_Enu_rec_muonDisappear
+              !! add oscillated electron appearance for various CP violation phases
+-             if (OSC(nuEXP)) then
++             if (nuEXP.eq.-1) then
++              ! don't oscillate input fluxes.
++             else if (OSC(nuEXP)) then
+                 L=OSCLENGTH(nuEXP)
+                 call oscillationProbability(Enureal,L,0.,Posc_mumu,Posc_mue,Posc_mue_max, &
+                    & Posc_mue_antimax)
+@@ -3027,7 +3035,9 @@
+              if (.not.includeHist(iHist)) cycle
+
+
+-             if (OSC(nuEXP) ) then
++             if (nuEXP.eq.-1) then
++              ! don't oscillate input fluxes.
++             else if (OSC(nuEXP) ) then
+
+                 call writeHist(Oscmumu_enu_real(m,iHist), &
+                      & file='oscillations_mumu_real_'//trim(filename1)//"."// &
+diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/esample.f90 ./release2016/code/init/neutrino/esample.f90
+--- ./release2016/code/init/neutrino/esample.f90	2016-07-11 11:30:45.965055046 +0100
++++ ./release2016/code/init/neutrino/esample.f90	2016-07-11 11:12:28.904968886 +0100
+@@ -100,6 +100,13 @@
+     write(*,*) "Enu_true_upper_cut =",Enu_upper_cut
+     write(*,*) "E-Limit for Qs-Reconstruction =",energylimit_for_Qsrec
+
++
++    fileName = trim(fluxfilename)
++    ! If file name is a fully qualified path then assume it points to a flux
++    ! file not from the buuinput directory.
++    if(.not.(fileName(1:1) == '/')) then
++      fileName = trim(path_to_Input)//'/neutrino/'//trim(fluxfilename)
++    end if
+     !   Now reading of flux file from buuinput/neutrinos
+     fileName=trim(path_to_Input)//'/neutrino/'//trim(fluxfilename)
+     call Write_ReadingInput(fileName,0)
+diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/expNeutrinofluxes.f90 ./release2016/code/init/neutrino/expNeutrinofluxes.f90
+--- ./release2016/code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:30:46.011636255 +0100
++++ ./release2016/code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:27:35.433825838 +0100
+@@ -31,6 +31,7 @@
+   public ::  LBNOenergyNU
+   public ::  NOMADenergyNU
+   public ::  BNBenergyNUe, BNBenergyNUebar,  BNBenergyNUmu, BNBenergyNUmubar
++  public ::  ArbFluxInput, InputFluxFileName
+
+   logical, save :: firsttime=.true.
+
+@@ -78,7 +79,18 @@
+   ! can be changed in the namelist nl_neutrino_energyFlux
+   !***************************************************************************
+
+-
++  !***************************************************************************
++  !****g* expNeutrinofluxes/InputFluxFileName
++  ! SOURCE
++  !
++  character(300), save :: InputFluxFileName = "/dev/null"
++  !
++  ! PURPOSE
++  ! Read input flux histogram from this file
++  !
++  ! Reads in two column text histogram where left column is assumed to be flux
++  ! bin centers, and right is flux bin content.
++  !***************************************************************************
+
+ contains
+
+@@ -1615,5 +1627,34 @@
+  end function NOVAenergyNU_FD
+
+
++ !*************************************************************************
++ !****f* expNeutrinofluxes/ArbFluxInput
++ ! NAME
++ ! real function ArbFluxInput()
++ !
++ ! PURPOSE
++ ! This function returns the sampled neutrino energy for an arbitrary input
++ ! flux.
++ !*************************************************************************
++ real function ArbFluxInput()
++    use esample, only : read_fluxfile, eneut
++
++    integer,parameter :: NDIM = 210          !maximal dimension of fluxfile
++    real, dimension (NDIM), save :: enu, flux
++    real, dimension (0:NDIM), save :: sumflux
++    integer, save :: jmax
++
++!   Now reading of flux file from buuinput/neutrinos
++
++    if(firsttime) then
++        call read_fluxfile(NDIM, InputFluxFileName, jmax, enu, flux ,sumflux)
++        firsttime=.false.
++    end if
++
++!   Now call of sampling routine
++     ArbFluxInput = eneut(NDIM, jmax, sumflux, enu)
++
++ end function ArbFluxInput
++
+
+  end module expNeutrinofluxes
+diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/initNeutrino.f90 ./release2016/code/init/neutrino/initNeutrino.f90
+--- ./release2016/code/init/neutrino/initNeutrino.f90	2016-07-11 11:30:45.965055046 +0100
++++ ./release2016/code/init/neutrino/initNeutrino.f90	2016-07-11 11:19:27.095923439 +0100
+@@ -14,6 +14,7 @@
+   use neutrino_IDTable
+   use Electron_origin, only: origin_singlePi, origin_doublePi, &
+        origin_DIS, origin_2p2hQE, origin_2p2hDelta
++  use ExpNeutrinofluxes, only: InputFluxFileName
+
+   implicit none
+
+@@ -99,6 +100,7 @@
+   ! SOURCE
+   integer, save :: nuExp=0
+   ! PURPOSE
++  ! * -1 = Read arbitrary flux input from InputFluxFile
+   ! * 0 = no specific experiment
+   ! * 1 = MiniBooNE neutrino flux (in neutrino mode = positive polarity)
+   ! * 2 = ANL
+@@ -157,7 +159,6 @@
+   ! OSC is true for oscillation experiments, false otherwise
+   !
+
+-
+   !***************************************************************************
+   !****g* initNeutrino/debugFlag
+   ! SOURCE
+@@ -319,6 +320,7 @@
+   subroutine readInput
+     use output
+     use esample
++    use expNeutrinofluxes, only : InputFluxFileName
+
+     integer :: ios
+
+@@ -345,6 +347,7 @@
+     ! * realRun
+     !*************************************************************************
+     NAMELIST /neutrino_induced/  process_ID,flavor_ID,nuXsectionMode,nuExp, &
++         & InputFluxFileName, &
+          & debugFlag,includeQE,includeDELTA,includeRES,include1pi,includeDIS,&
+          & include2p2hQE, include2p2hDelta, include2pi, &
+          & sigmacut, realRun
+@@ -392,6 +395,9 @@
+
+     if(nuXsectionMode.ge.10) then
+        select case(nuExp)
++       case (-1)
++          write(*,*) '##### calculation is done for arbitrary flux file ', &
++          & InputFluxFileName
+        case (1:numberOfExperiments)
+           write(*,*) '##### calculation is done for the ',trim(sExp(nuExp)),&
+                & ' experiment #####'
+@@ -681,7 +687,9 @@
+
+
+           flux_enu = -99.9
+-          if(nuExp.gt.0) then
++          if(nuExp.eq.-1) then
++            flux_enu = ArbFluxInput()
++          else if(nuExp.gt.0) then
+              select case(nuExp)
+              case (1)
+                 flux_enu=MiniBooNEenergy()
+@@ -927,7 +935,8 @@
+           fak1 = sigtot/float(numtry)
+           fak2 = 1./float(num_runs_sameEnergy)
+
+-          call neutrinoProdInfo_Store(firstEvent, k, fak1,&
++          call neutrinoProdInfo_Store(firstEvent, k, finalstate(1)%charge, &
++               fak1, &
+                eNev(k)%lepton_in%momentum,&
+                eNev(k)%lepton_out%momentum,&
+                eNev(k)%boson%momentum,&
+diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/neutrinoProdInfo.f90 ./release2016/code/init/neutrino/neutrinoProdInfo.f90
+--- ./release2016/code/init/neutrino/neutrinoProdInfo.f90	2016-07-11 11:30:45.967221614 +0100
++++ ./release2016/code/init/neutrino/neutrinoProdInfo.f90	2016-07-11 11:22:32.021160246 +0100
+@@ -20,6 +20,7 @@
+   type tneutrinoProdInfo
+      logical                :: flagOK=.false.
+      integer                :: prod_id=0
++     integer                :: prod_chrg=0
+      real                   :: perweight=0.
+      real,dimension(0:3)    :: mom_lepIn=0.
+      real,dimension(0:3)    :: mom_lepOut=0.
+@@ -71,6 +72,7 @@
+
+     nuProdInfo%flagOK=.false.
+     nuProdInfo%prod_id=0
++    nuProdInfo%prod_chrg=0
+     nuProdInfo%perweight=0.
+     nuProdInfo%mom_LepIn(0) = 0.
+     nuProdInfo%mom_LepIn(1) = 0.
+@@ -95,7 +97,7 @@
+   !********************************************************************
+   !****s* neutrinoProdInfo/neutrinoProdInfo_Store
+   ! NAME
+-  ! subroutine neutrinoProdInfo_Store(i,prod_id,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos)
++  ! subroutine neutrinoProdInfo_Store(i,prod_id,prod_chrg,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos)
+   !
+   ! PURPOSE
+   ! Store the event info connected with number "i":
+@@ -104,6 +106,7 @@
+   ! INPUTS
+   ! * integer :: i -- actual number of event
+   ! * integer :: prod_id (1=N, 2=Delta, 3=P_11(1440)  32=pi-neutron-background 34=DIS  and so on)
++  ! * integer :: prod_chrg the charge of the produced particle, useful for determining resonance production for prod_it 2-31
+   ! * real    :: perweight
+   ! * real,dimension(0:3)    :: Mom_LepIn
+   ! * real,dimension(0:3)    :: Mom_LepOut
+@@ -111,10 +114,11 @@
+   ! OUTPUT
+   ! ---
+   !********************************************************************
+-  subroutine neutrinoProdInfo_Store(i,prod_id,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos,Mom_Nuc,Chrg_Nuc)
++  subroutine neutrinoProdInfo_Store(i,prod_id,prod_chrg,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos,Mom_Nuc,Chrg_Nuc)
+
+     integer,intent(in)             :: i
+     integer,intent(in)             :: prod_id
++    integer,intent(in)             :: prod_chrg
+     real,intent(in)                :: perweight
+     real,dimension(0:3),intent(in) :: Mom_LepIn
+     real,dimension(0:3),intent(in) :: Mom_LepOut
+@@ -124,6 +128,7 @@
+
+     nuProdInfo(i)%flagOK=.true.
+     nuProdInfo(i)%prod_id=prod_id
++    nuProdInfo(i)%prod_chrg=prod_chrg
+     nuProdInfo(i)%perweight=perweight
+     nuProdInfo(i)%mom_LepIn=mom_LepIn
+     nuProdInfo(i)%mom_LepOut=mom_LepOut
+@@ -147,15 +152,17 @@
+   !
+   ! OUTPUT
+   ! * integer :: prod_id
++  ! * integer :: prod_chrg
+   ! * real    :: perweight
+   ! * real,dimension(0:3)    :: Mom_LepIn
+   ! * real,dimension(0:3)    :: Mom_LepOut
+   ! * real,dimension(0:3)    :: Mom_Bos
+   !********************************************************************
+-  logical function neutrinoProdInfo_Get(i,prod_id,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos,Mom_Nuc, Chrg_Nuc)
++  logical function neutrinoProdInfo_Get(i,prod_id,prod_chrg,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos,Mom_Nuc, Chrg_Nuc)
+
+     integer,intent(in)              :: i
+     integer,intent(out)             :: prod_id
++    integer,intent(out)             :: prod_chrg
+     real,intent(out)                :: perweight
+     real,dimension(0:3),intent(out) :: Mom_LepIn
+     real,dimension(0:3),intent(out) :: Mom_LepOut
+@@ -169,6 +176,7 @@
+     if (.not.ALLOCATED(nuProdInfo)) return
+
+     prod_id=nuProdInfo(i)%prod_id
++    prod_chrg=nuProdInfo(i)%prod_chrg
+     perweight=nuProdInfo(i)%perweight
+     mom_LepIn=nuProdInfo(i)%mom_LepIn
+     mom_LepOut=nuProdInfo(i)%mom_LepOut
+@@ -196,11 +204,12 @@
+     integer,intent(in)               :: i
+
+     integer              :: prod_id
++    integer              :: prod_chrg
+     real                 :: perweight
+     real,dimension(0:3)  :: mom_LepIn, mom_LepOut,mom_Bos, mom_Nuc
+     integer :: Chrg_Nuc
+
+-    if (neutrinoProdInfo_Get(i,prod_id,perweight,mom_LepIn,mom_LepOut,mom_Bos, mom_Nuc, Chrg_Nuc)) then
++    if (neutrinoProdInfo_Get(i,prod_id,prod_chrg,perweight,mom_LepIn,mom_LepOut,mom_Bos, mom_Nuc, Chrg_Nuc)) then
+        write(*,'("** neutrinoProdInfo(",i7,")    prod_id=",i7,"   perweight=",1P,e13.4,0P)') i,prod_id,perweight
+
+     else
+diff -urw -x 'Makefile*' ./release2016/code/inputOutput/EventOutputFile.f90 ./release2016/code/inputOutput/EventOutputFile.f90
+--- ./release2016/code/inputOutput/EventOutputFile.f90	2016-07-11 11:30:52.203687256 +0100
++++ ./release2016/code/inputOutput/EventOutputFile.f90	2016-07-11 11:24:03.229334844 +0100
+@@ -351,7 +351,7 @@
+     type(tParticleListNode), pointer, optional :: pNode
+
+     real :: weight,nu,Q2,eps,phiL
+-    integer :: evtType, chrg_nuc
++    integer :: evtType, prod_chrg, chrg_nuc
+     real,dimension(0:3) :: momLepIn, momLepOut, momBos, momNuc
+     type(particle), pointer :: pPart
+     real, dimension(0:3) :: pos
+@@ -365,8 +365,8 @@
+       write(this%iFile,'(A,ES13.4)') '# 300 ', b_had
+     case (neutrino)
+       if (.not. present(iFE)) return
+-      if (NeutrinoProdInfo_Get (iFE,evtType,Weight,momLepIn,momLepOut,momBos,momNuc,chrg_nuc)) &
+-        write(this%iFile,'(A,I5,1P,e18.10,1P,3(" ",4e18.10),0P,A)') '# 5 ', evtType, Weight, momLepIn, momLepOut, momNuc
++      if (NeutrinoProdInfo_Get (iFE,evtType,prod_chrg,Weight,momLepIn,momLepOut,momBos,momNuc,chrg_nuc)) &
++        write(this%iFile,'(A,2I5,1P,e18.10,1P,3(" ",4e18.10),0P,A)') '# 5 ', evtType, prod_chrg, Weight, momLepIn, momLepOut, momNuc
+     case (hiLepton)
+       if (.not. present(iFE)) return
+       if (EventInfo_HiLep_Get (0,iFE,Weight,nu,Q2,eps,evtType,phi_Lepton=phiL)) &

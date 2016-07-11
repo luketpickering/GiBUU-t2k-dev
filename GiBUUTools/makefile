@@ -28,12 +28,12 @@ LIBUTILSLD := -L$(UTILSLOC)/lib  -lLUtils
 
 .PHONY: all clean distclean
 
-all: $(TARGET)
+all: $(TARGET) BinEdgeToBinCenterPDFFlux.exe
 	mkdir -p $(BDIR)
-	mv $(TARGET) $(BDIR)/
+	mv $(TARGET) BinEdgeToBinCenterPDFFlux.exe $(BDIR)/
 	@echo ""
 	@echo "*********************************************************************"
-	@echo "Success. Built GiBUUToStdHep."
+	@echo "Success. Built GiBUUTools."
 	@echo "*********************************************************************"
 
 ../GiBUUInstall/release1.6:
@@ -42,7 +42,7 @@ all: $(TARGET)
 
 ../GiBUUInstall/release2016:
 	mkdir -p ../GiBUUInstall;
-	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/release2016 ./release2016
+	cd ../GiBUUInstall; svn co -r 6904 http://gibuu.hepforge.org/svn/releases/release2016 ./release2016
 
 ../GiBUUInstall/buuinput_1_6:
 	mkdir -p ../GiBUUInstall;
@@ -56,10 +56,9 @@ all: $(TARGET)
 	cd ../GiBUUInstall; patch -p0 < ../AddInitStateInfo_fixed.patch
 	touch $@
 
-../GiBUUInstall/release2016/InitialStateInfo.patched: ../GiBUUInstall/release2016
-	cd ../GiBUUInstall; patch -p0 < ../AddInitStateInfo_fixed_2016.patch
+../GiBUUInstall/release2016/GiBUU2016_ArbFlux_ProdCharg.patched: ../GiBUUInstall/release2016
+	cd ../GiBUUInstall; patch -p1 --ignore-whitespace < ../GiBUU2016_ArbFlux_ProdCharg.patch
 	touch $@
-
 
 ../GiBUUInstall/release1.6/bin/gibuu: ../GiBUUInstall/release1.6/InitialStateInfo.patched ../GiBUUInstall/buuinput_1_6
 	cd ../GiBUUInstall/release1.6; $(MAKE)
@@ -71,7 +70,7 @@ all: $(TARGET)
 	@echo "To begin using this please re-source setup.sh"
 	@echo "Then test that gibuu is where you expect it by $ which gibuu"
 
-../GiBUUInstall/release2016/bin/gibuu: ../GiBUUInstall/release2016/InitialStateInfo.patched ../GiBUUInstall/buuinput_2016
+../GiBUUInstall/release2016/bin/gibuu: ../GiBUUInstall/release2016/GiBUU2016_ArbFlux_ProdCharg.patched ../GiBUUInstall/buuinput_2016
 	cd ../GiBUUInstall/release2016; $(MAKE)
 	cd ../GiBUUInstall/release2016; mkdir -p bin; cp objects/GiBUU.x bin/gibuu;
 	@echo ""
@@ -86,6 +85,9 @@ SlaveGiBUU_2016:../GiBUUInstall/release2016/bin/gibuu
 
 $(TARGET): $(TARGETSRC) $(HF) $(OBJS) $(LHPCLIB)
 	$(CXX) $< -o $@ $(CXXFLAGS) -I$(UTILSINC) -I$(LHPCINC) $(OBJS) $(LHPCLD) $(LIBUTILSLD) $(LDFLAGS)
+
+BinEdgeToBinCenterPDFFlux.exe: BinEdgeToBinCenterPDFFlux.cxx
+	$(CXX) $< -o $@ $(CXXFLAGS) -I$(UTILSINC) $(LIBUTILSLD) $(LDFLAGS)
 
 %.o : %.cxx $(HF)
 	$(CXX) $(CXXFLAGS) -I$(UTILSINC) -o $@ -c $<

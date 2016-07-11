@@ -8,21 +8,15 @@ else
   SETUPDIR=$(readlink -f ${BASH_SOURCE%/*})
 fi
 
-if [[ ! -e utils/.git ]] || [[ ! -e LesHouchesParserClasses_CPP/.git ]]; then
+if [[ ! -e ${SETUPDIR}/utils/.git ]] || [[ ! -e ${SETUPDIR}/LesHouchesParserClasses_CPP/.git ]]; then
+  cd ${SETUPDIR}
   git submodule init
   git submodule update
+  cd -
 fi
 
-if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUToStdHep/bin:"* ]]; then
-  export PATH=${SETUPDIR}/GiBUUToStdHep/bin:$PATH
-fi
-
-if [[ -e "${SETUPDIR}/GiBUUInstall/release1.6/bin/gibuu" ]]; then
-  if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUInstall/release1.6/bin:"* ]]; then
-    export GIBUU=${SETUPDIR}/GiBUUInstall/release1.6
-    export PATH=${GIBUU}/bin:${PATH}
-    echo "Added patched GiBUU install to PATH @ ${GIBUU}/bin/gibuu"
-  fi
+if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUTools/bin:"* ]]; then
+  export PATH=${SETUPDIR}/GiBUUTools/bin:$PATH
 fi
 
 unset SETUPDIR

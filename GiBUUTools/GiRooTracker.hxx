@@ -34,6 +34,10 @@ struct GiRooTracker {
 
   ///\brief The GiBUU interaction type.
   Int_t GiBUUReactionCode;
+  ///\brief The charge of the first particle produced in the neutrino interaction.
+  ///
+  /// Useful for determinining the charge of the resonance in resonant pion production.
+  Int_t GiBUUPrimaryParticleCharge;
 
   ///\brief The event number from the input event vector.
   ///
@@ -69,8 +73,20 @@ struct GiRooTracker {
   Int_t* GiBHepMother; //[StdHepN]
   Int_t* GiBHepGeneration; //[StdHepN]
 
-  ///\brief Weighting which should be assigned to this event.
+  ///\brief GiBUU reported event weight.
+  ///Directly related to the cross section assuming this run is in isolation.
   Double_t GiBUUPerWeight;
+
+  ///\brief An extra weight that needs to be applied due using multiple runs
+  ///to enhance event statistics.
+  Double_t NumRunsWeight;
+
+  ///\brief an arbitrary weight that is passed in at parse time. Useful for
+  ///combining different fluxes or molecular target constituents.
+  Double_t ExtraWeight;
+
+  ///\brief The total XSec weighting that should be applied to this event.
+  Double_t EvtWght;
 
   ///\brief Struck Nucleon PDG code which is turned on when emulating NuWro so
   ///as not to lose information.
@@ -83,7 +99,7 @@ struct GiRooTracker {
 
   ///\brief Will add the relevant output branches to a given TTree.
   void AddBranches(TTree* &tree, bool AddHistory=false,
-    bool AddStruckNucleonPDG=false, bool EmulateNuWro=false);
+    bool AddStruckNucleonPDG=false, bool EmulateNuWro=false, bool AddProdCharge=false);
 
 };
 #endif
