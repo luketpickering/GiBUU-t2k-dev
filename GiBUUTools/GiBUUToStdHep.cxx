@@ -87,6 +87,7 @@ std::vector<int> TargetZs;
 ///  `GiBUUToStdHep.exe ... -c ...'
 std::vector<bool> CCFiles;
 std::vector<float> FileExtraWeights;
+float OverallWeight;
 ///\brief The maximum number of input entries to process.
 ///
 ///\note Set by
@@ -330,9 +331,9 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       giRooTracker->GiBUUPerWeight = ev.front().PerWeight;
       giRooTracker->NumRunsWeight = 1.0 / NRunsScaleFactor;
       giRooTracker->ExtraWeight = FileExtraWeight;
-      giRooTracker->EvtWght = giRooTracker->GiBUUPerWeight *
-                              giRooTracker->NumRunsWeight *
-                              giRooTracker->ExtraWeight;
+      giRooTracker->EvtWght =
+          giRooTracker->GiBUUPerWeight * giRooTracker->NumRunsWeight *
+          giRooTracker->ExtraWeight * *GiBUUToStdHepOpts::OverallWeight;
 
       giRooTracker->StdHepN = 2;
 
@@ -895,15 +896,15 @@ void SetOpts() {
                     double ival = 0;
                     bool IsReciprocal = false;
                     std::string inp = opt;
-                    if(inp[0] == 'i'){
+                    if (inp[0] == 'i') {
                       IsReciprocal = true;
-                      inp = Utils::Replace(inp,"i","");
+                      inp = Utils::Replace(inp, "i", "");
                     }
 
                     try {
                       ival = Utils::str2d(inp, true);
-                      if(IsReciprocal){
-                        ival = (1.0/ival);
+                      if (IsReciprocal) {
+                        ival = (1.0 / ival);
                       }
                     } catch (...) {
                       return false;
@@ -912,6 +913,30 @@ void SetOpts() {
                               << std::endl;
                     GiBUUToStdHepOpts::FileExtraWeights.push_back(ival);
                     return true;
+                  },
+                  false, []() {}, "[i]<Next file extra weight [1.0/]'W'>");
+
+  CLIArgs::AddOpt("-R", "--Total-ReWeight", true,
+                  [&](std::string const &opt) -> bool {
+                    double ival = 0;
+                    bool IsReciprocal = false;
+                    std::string inp = opt;
+                    if (inp[0] == 'i') {
+                      IsReciprocal = true;
+                      inp = Utils::Replace(inp, "i", "");
+                    }
+
+                    try {
+                      ival = Utils::str2d(inp, true);
+                      if (IsReciprocal) {
+                        ival = (1.0 / ival);
+                      }
+                    } catch (...) {
+                      return false;
+                    }
+                    std::cout << "\t--Assigning overall weight: " << ival
+                              << std::endl;
+                    GiBUUToStdHepOpts::OverallWeight = ival return true;
                   },
                   false, []() {}, "[i]<Next file extra weight [1.0/]'W'>");
 
