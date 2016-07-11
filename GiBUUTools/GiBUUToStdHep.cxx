@@ -333,7 +333,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       giRooTracker->ExtraWeight = FileExtraWeight;
       giRooTracker->EvtWght =
           giRooTracker->GiBUUPerWeight * giRooTracker->NumRunsWeight *
-          giRooTracker->ExtraWeight * *GiBUUToStdHepOpts::OverallWeight;
+          giRooTracker->ExtraWeight * GiBUUToStdHepOpts::OverallWeight;
 
       giRooTracker->StdHepN = 2;
 
