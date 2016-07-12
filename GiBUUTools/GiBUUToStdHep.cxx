@@ -2,11 +2,16 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 
+// Unix
+#include <unistd.h>
+
 #include "TFile.h"
 #include "TLorentzVector.h"
+#include "TRegexp.h"
 #include "TTree.h"
 #include "TVector3.h"
 
@@ -202,7 +207,7 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
 }
 
 int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
-  std::map<std::string, std::vector<std::vector<GiBUUPartBlob> > > Events;
+  std::vector<std::vector<GiBUUPartBlob> > FileEvents;
   // http://www2.research.att.com/~bs/bs_faq2.html
   // People sometimes worry about the cost of std::vector growing incrementally.
   // I used to worry about that and used reserve() to optimize the growth.
@@ -212,6 +217,9 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
   // code). Again: measure before you optimize.
 
   size_t ParsedEvs = 0;
+  size_t fileNumber = 0;
+  size_t NumEvs = 0;
+
   for (auto &fname : GiBUUToStdHepOpts::InpFNames) {
     std::ifstream ifs(fname);
 
@@ -220,8 +228,6 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
                 << std::endl;
       return 1;
     }
-
-    auto &FileEvents = Events[fname];
 
     std::string line;
     std::vector<GiBUUPartBlob> CurrEv;
@@ -267,18 +273,15 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     ifs.close();  // Read all the lines.
     std::cout << "Found " << FileEvents.size() << " events in " << fname << "."
               << std::endl;
-  }
 
-  size_t NumEvs = 0;
-  size_t fn = 0;
-  for (auto const &FileEvents : Events) {
-    double NRunsScaleFactor = FileEvents.second.back().back().Run;
-    bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fn];
-    int FileNuType = GiBUUToStdHepOpts::nuTypes[fn];
-    int FileTargetA = GiBUUToStdHepOpts::TargetAs[fn];
-    int FileTargetZ = GiBUUToStdHepOpts::TargetZs[fn];
-    double FileExtraWeight = GiBUUToStdHepOpts::FileExtraWeights[fn];
-    for (auto const &ev : FileEvents.second) {
+    double NRunsScaleFactor = FileEvents.back().back().Run;
+    bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fileNumber];
+    int FileNuType = GiBUUToStdHepOpts::nuTypes[fileNumber];
+    int FileTargetA = GiBUUToStdHepOpts::TargetAs[fileNumber];
+    int FileTargetZ = GiBUUToStdHepOpts::TargetZs[fileNumber];
+    double FileExtraWeight = GiBUUToStdHepOpts::FileExtraWeights[fileNumber];
+
+    for (auto const &ev : FileEvents) {
       giRooTracker->Reset();
 
       int const &EvNum = ev.front().EvNum;
@@ -510,8 +513,10 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       OutputTree->Fill();
       NumEvs++;
     }
-    fn++;
+    FileEvents.clear();
+    fileNumber++;
   }
+
   std::cout << "[INFO]: Saved: " << NumEvs
             << " events, skipped: " << (ParsedEvs - NumEvs)
             << " because of low weight"
@@ -745,24 +750,93 @@ int GiBUUToStdHep() {
   return ParserRtnCode;
 }
 
+bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
+              int TargetZ, float FileExtraWeight) {
+  size_t AsteriskPos = OptVal.find_last_of('*');
+  if (AsteriskPos == std::string::npos) {
+    std::cout << "\t--Adding file: " << OptVal << std::endl;
+    GiBUUToStdHepOpts::InpFNames.push_back(OptVal);
+    GiBUUToStdHepOpts::nuTypes.push_back(NuType);
+    GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
+    GiBUUToStdHepOpts::TargetZs.push_back(TargetZ);
+    GiBUUToStdHepOpts::CCFiles.push_back(IsCC);
+    GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight);
+    return true;
+  }
+
+  DIR *dir;
+  struct dirent *ent;
+  size_t lastFSlash = OptVal.find_last_of('/');
+  std::string matchPat = OptVal.substr(lastFSlash + 1);
+  std::string dirpath = "";
+  if (lastFSlash == std::string::npos) {
+    std::unique_ptr<char[]> cwd(new char[1000]);
+    getcwd(cwd.get(), sizeof(char) * 1000);
+    std::cout << "\t--Looking in current directory (" << cwd.get()
+              << ") for matching (\"" << matchPat << "\") files." << std::endl;
+    dirpath = "./";
+  } else {
+    if (AsteriskPos < lastFSlash) {
+      std::cerr << "[ERROR]: Currently cannot handle a wildcard in the "
+                   "directory structure. Please put input files in the same "
+                   "directory or use separate -f arguments. Expected -f "
+                   "\"../some/rel/path/*.dat\""
+                << std::endl;
+      return false;
+    }
+    dirpath = OptVal.substr(0, lastFSlash + 1);
+    std::cout << "\t--Looking in directory (" << dirpath
+              << ") for matching files." << std::endl;
+  }
+  dir = opendir(dirpath.c_str());
+
+  if (dir != NULL) {
+    TRegexp matchExp(matchPat.c_str(), true);
+    /* print all the files and directories within directory */
+    Ssiz_t len = 0;
+    while ((ent = readdir(dir)) != NULL) {
+      if (matchExp.Index(TString(ent->d_name), &len) != Ssiz_t(-1)) {
+        std::cout << "\t\t\tAdding matching file: " << (dirpath + ent->d_name)
+                  << "(nu: " << NuType << ", A: " << TargetA
+                  << ", Z: " << TargetZ << ", W: " << FileExtraWeight
+                  << ", IsCC: " << IsCC << ")" << std::endl;
+        GiBUUToStdHepOpts::InpFNames.push_back((dirpath + ent->d_name));
+        GiBUUToStdHepOpts::nuTypes.push_back(NuType);
+        GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
+        GiBUUToStdHepOpts::TargetZs.push_back(TargetZ);
+        GiBUUToStdHepOpts::CCFiles.push_back(IsCC);
+        GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight);
+      }
+    }
+    closedir(dir);
+  } else {
+    /* could not open directory */
+    perror("");
+    return false;
+  }
+  return true;
+}
+
 void SetOpts() {
   CLIArgs::AddOpt(
       "-f", "--FEinput-file", true,
       [&](std::string const &opt) -> bool {
-        std::cout << "\t--Reading FinalEvents-style GiBUU file : " << opt
-                  << std::endl;
-        GiBUUToStdHepOpts::InpFNames.push_back(opt);
-        GiBUUToStdHepOpts::InpIsFE = true;
+
         if (GiBUUToStdHepOpts::InpIsLH) {
           std::cerr
               << "[ERROR] only one style of input allowed, -l already used."
               << std::endl;
           return false;
         }
-        if (GiBUUToStdHepOpts::CCFiles.size() <
+
+        GiBUUToStdHepOpts::InpIsFE = true;
+
+        bool IsCC = true;
+        // If specified as NC take that, otherwise, assume CC
+        if (GiBUUToStdHepOpts::CCFiles.size() >
             GiBUUToStdHepOpts::InpFNames.size()) {
-          GiBUUToStdHepOpts::CCFiles.push_back(true);
-          std::cout << "\t\t--File assumed CC events." << std::endl;
+          IsCC = GiBUUToStdHepOpts::CCFiles.back();
+          GiBUUToStdHepOpts::CCFiles.pop_back();
         }
 
         if ((!GiBUUToStdHepOpts::nuTypes.size()) ||
@@ -774,54 +848,58 @@ void SetOpts() {
           return false;
         }
 
-        if (GiBUUToStdHepOpts::nuTypes.size() <
+        std::cout
+            << "\t--Reading FinalEvents-style GiBUU file(s) from descriptor: \""
+            << opt << "\"" << std::endl;
+
+        // Assume previous or latest specified otherwise.
+        int NuType = GiBUUToStdHepOpts::nuTypes.back();
+        int TargetA = GiBUUToStdHepOpts::TargetAs.back();
+        int TargetZ = GiBUUToStdHepOpts::TargetZs.back();
+
+        if (GiBUUToStdHepOpts::nuTypes.size() >
             GiBUUToStdHepOpts::InpFNames.size()) {
-          GiBUUToStdHepOpts::nuTypes.push_back(
-              GiBUUToStdHepOpts::nuTypes.back());
-          std::cout << "\t\t--File assumed Nu PDG: "
-                    << GiBUUToStdHepOpts::nuTypes.back() << std::endl;
+          GiBUUToStdHepOpts::nuTypes.pop_back();
         }
-        if (GiBUUToStdHepOpts::TargetAs.size() <
+        if (GiBUUToStdHepOpts::TargetAs.size() >
             GiBUUToStdHepOpts::InpFNames.size()) {
-          GiBUUToStdHepOpts::TargetAs.push_back(
-              GiBUUToStdHepOpts::TargetAs.back());
-          std::cout << "\t\t--File assumed target a: "
-                    << GiBUUToStdHepOpts::TargetAs.back() << std::endl;
+          GiBUUToStdHepOpts::TargetAs.pop_back();
         }
-        if (GiBUUToStdHepOpts::TargetZs.size() <
+        if (GiBUUToStdHepOpts::TargetZs.size() >
             GiBUUToStdHepOpts::InpFNames.size()) {
-          GiBUUToStdHepOpts::TargetZs.push_back(
-              GiBUUToStdHepOpts::TargetZs.back());
-          std::cout << "\t\t--File assumed target z: "
-                    << GiBUUToStdHepOpts::TargetZs.back() << std::endl;
+          GiBUUToStdHepOpts::TargetZs.pop_back();
         }
-        if (GiBUUToStdHepOpts::FileExtraWeights.size() <
+
+        float FileExtraWeight = 1.0;
+        if (GiBUUToStdHepOpts::FileExtraWeights.size() >
             GiBUUToStdHepOpts::InpFNames.size()) {
-          GiBUUToStdHepOpts::FileExtraWeights.push_back(1.0);
-          std::cout << "\t\t--File assumed weight is: 1.0" << std::endl;
+          FileExtraWeight = GiBUUToStdHepOpts::FileExtraWeights.back();
+          GiBUUToStdHepOpts::FileExtraWeights.pop_back();
         }
-        return true;
+
+        return AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
       },
       false, []() { GiBUUToStdHepOpts::InpIsFE = false; }, "<File Name>");
 
-  CLIArgs::AddOpt(
-      "-l", "--LHinput-file", true,
-      [&](std::string const &opt) -> bool {
-        std::cerr << "LesHouches format is currently disabled." << std::endl;
-        return false;
-        std::cout << "\t--Reading LesHouches Event Format GiBUU file : " << opt
-                  << std::endl;
-        GiBUUToStdHepOpts::InpFNames.push_back(opt);
-        GiBUUToStdHepOpts::InpIsLH = true;
-        if (GiBUUToStdHepOpts::InpIsFE) {
-          std::cerr
-              << "[ERROR] only one style of input allowed, -f already used."
-              << std::endl;
-          throw 6;
-        }
-        return true;
-      },
-      false, []() { GiBUUToStdHepOpts::InpIsLH = false; }, "<File Name>");
+  // CLIArgs::AddOpt(
+  //     "-l", "--LHinput-file", true,
+  //     [&](std::string const &opt) -> bool {
+  //       std::cerr << "LesHouches format is currently disabled." << std::endl;
+  //       return false;
+  //       std::cout << "\t--Reading LesHouches Event Format GiBUU file : " <<
+  //       opt
+  //                 << std::endl;
+  //       GiBUUToStdHepOpts::InpFNames.push_back(opt);
+  //       GiBUUToStdHepOpts::InpIsLH = true;
+  //       if (GiBUUToStdHepOpts::InpIsFE) {
+  //         std::cerr
+  //             << "[ERROR] only one style of input allowed, -f already used."
+  //             << std::endl;
+  //         throw 6;
+  //       }
+  //       return true;
+  //     },
+  //     false, []() { GiBUUToStdHepOpts::InpIsLH = false; }, "<File Name>");
 
   CLIArgs::AddOpt(
       "-o", "--output-file", true,
@@ -842,6 +920,14 @@ void SetOpts() {
                       return false;
                     }
 
+                    if (GiBUUToStdHepOpts::nuTypes.size() >
+                        GiBUUToStdHepOpts::InpFNames.size()) {
+                      std::cerr << "[ERROR]: Found another -u option before "
+                                   "the next file has been specified."
+                                << std::endl;
+                      return false;
+                    }
+
                     std::cout << "\t--Assuming next file has Nu PDG: " << ival
                               << std::endl;
                     GiBUUToStdHepOpts::nuTypes.push_back(ival);
@@ -851,7 +937,16 @@ void SetOpts() {
 
   CLIArgs::AddOpt("-N", "--is-NC", false,
                   [&](std::string const &opt) -> bool {
-                    std::cout << "\t--Assuming next file contains NC events. "
+
+                    if (GiBUUToStdHepOpts::CCFiles.size() >
+                        GiBUUToStdHepOpts::InpFNames.size()) {
+                      std::cerr << "[ERROR]: Found another -N option before "
+                                   "the next file has been specified."
+                                << std::endl;
+                      return false;
+                    }
+
+                    std::cout << "\t--Assuming next files contains NC event."
                               << std::endl;
                     GiBUUToStdHepOpts::CCFiles.push_back(false);
                     return true;
@@ -860,6 +955,15 @@ void SetOpts() {
 
   CLIArgs::AddOpt("-a", "--target-a", true,
                   [&](std::string const &opt) -> bool {
+
+                    if (GiBUUToStdHepOpts::TargetAs.size() >
+                        GiBUUToStdHepOpts::InpFNames.size()) {
+                      std::cerr << "[ERROR]: Found another -a option before "
+                                   "the next file has been specified."
+                                << std::endl;
+                      return false;
+                    }
+
                     int ival = 0;
                     try {
                       ival = Utils::str2i(opt, true);
@@ -867,8 +971,9 @@ void SetOpts() {
                       return false;
                     }
 
-                    std::cout << "\t--Assuming next file is target A: " << ival
-                              << std::endl;
+                    std::cout
+                        << "\t--Assuming next files are target A: " << ival
+                        << std::endl;
                     GiBUUToStdHepOpts::TargetAs.push_back(ival);
                     return true;
 
@@ -877,14 +982,24 @@ void SetOpts() {
 
   CLIArgs::AddOpt("-z", "--target-z", true,
                   [&](std::string const &opt) -> bool {
+
+                    if (GiBUUToStdHepOpts::TargetZs.size() >
+                        GiBUUToStdHepOpts::InpFNames.size()) {
+                      std::cerr << "[ERROR]: Found another -z option before "
+                                   "the next file has been specified."
+                                << std::endl;
+                      return false;
+                    }
+
                     int ival = 0;
                     try {
                       ival = Utils::str2i(opt, true);
                     } catch (...) {
                       return false;
                     }
-                    std::cout << "\t--Assuming next file is target Z: " << ival
-                              << std::endl;
+                    std::cout
+                        << "\t--Assuming next files are target Z: " << ival
+                        << std::endl;
                     GiBUUToStdHepOpts::TargetZs.push_back(ival);
                     return true;
 
@@ -893,6 +1008,15 @@ void SetOpts() {
 
   CLIArgs::AddOpt("-W", "--file-weight", true,
                   [&](std::string const &opt) -> bool {
+
+                    if (GiBUUToStdHepOpts::FileExtraWeights.size() >
+                        GiBUUToStdHepOpts::InpFNames.size()) {
+                      std::cerr << "[ERROR]: Found another -W option before "
+                                   "the next file has been specified."
+                                << std::endl;
+                      return false;
+                    }
+
                     double ival = 0;
                     bool IsReciprocal = false;
                     std::string inp = opt;
