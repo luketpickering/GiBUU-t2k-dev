@@ -67,10 +67,13 @@ int ROOTTH_ToBinCenterPDFFlux_Text() {
   std::unique_ptr<float[]> BinWidths(new float[inph->GetXaxis()->GetNbins()]);
   std::unique_ptr<float[]> BinValues(new float[inph->GetXaxis()->GetNbins()]);
   for (Int_t i = 0; i < inph->GetXaxis()->GetNbins(); ++i) {
-    BinCenters[i] = inph->GetXaxis()->GetBinCenter(i + i);
-    BinWidths[i] = (inph->GetXaxis()->GetBinLowEdge(i + 1) -
-                    inph->GetXaxis()->GetBinLowEdge(i + 2));
+    BinCenters[i] = inph->GetXaxis()->GetBinCenter(i + 1);
+    BinWidths[i] = (inph->GetXaxis()->GetBinLowEdge(i + 2) -
+                    inph->GetXaxis()->GetBinLowEdge(i + 1));
     BinValues[i] = inph->GetBinContent(i + i);
+    std::cout << "[ROOT] Bin: " << (i + 1) << ", center: " << BinCenters[i]
+              << ", width: " << BinWidths[i] << ", value: " << BinValues[i]
+              << std::endl;
   }
   return WriteFile(BinCenters, BinWidths, BinValues,
                    inph->GetXaxis()->GetNbins());
