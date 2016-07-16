@@ -195,7 +195,7 @@ diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/esample.f90 ./release2
 +    fileName = trim(fluxfilename)
 +    ! If file name is a fully qualified path then assume it points to a flux
 +    ! file not from the buuinput directory.
-+    if(.not.(fileName(1:1) == '/').or.(.not.(fileName(1:2) == './'))) then
++    if(.not.(fileName(1:1) == '/').and.(.not.(fileName(1:2) == './'))) then
 +      fileName = trim(path_to_Input)//'/neutrino/'//trim(fluxfilename)
 +    end if
      !   Now reading of flux file from buuinput/neutrinos
