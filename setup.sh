@@ -22,7 +22,6 @@ fi
 if [[ -e "${SETUPDIR}/GiBUUInstall/release2016/bin/gibuu" ]]; then
   if ! [[ ":$PATH:" == *":${SETUPDIR}/GiBUUInstall/release2016/bin:"* ]]; then
     export GIBUU=${SETUPDIR}/GiBUUInstall/release2016
-    export GIBUUINPUTS=${SETUPDIR}/GiBUUInstall/buuinput_2016
     export PATH=${GIBUU}/bin:$PATH
   fi
 fi

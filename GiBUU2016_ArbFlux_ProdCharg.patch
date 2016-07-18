@@ -1,4 +1,3 @@
-diff -urw -x 'Makefile*' ./release2016/code/analysis/AnaEvent.f90 ./release2016/code/analysis/AnaEvent.f90
 --- ./release2016/code/analysis/AnaEvent.f90	2016-07-11 11:30:52.598002611 +0100
 +++ ./release2016/code/analysis/AnaEvent.f90	2016-07-11 11:28:06.000848774 +0100
 @@ -2124,7 +2124,7 @@
@@ -79,7 +78,6 @@ diff -urw -x 'Makefile*' ./release2016/code/analysis/AnaEvent.f90 ./release2016/
            write(*,*) 'error in getting production info, stop'
            stop
         end if
-diff -urw -x 'Makefile*' ./release2016/code/analysis/neutrinoAnalysis.f90 ./release2016/code/analysis/neutrinoAnalysis.f90
 --- ./release2016/code/analysis/neutrinoAnalysis.f90	2016-07-11 11:30:52.599085895 +0100
 +++ ./release2016/code/analysis/neutrinoAnalysis.f90	2016-07-11 11:29:01.579814589 +0100
 @@ -1229,7 +1229,7 @@
@@ -184,24 +182,24 @@ diff -urw -x 'Makefile*' ./release2016/code/analysis/neutrinoAnalysis.f90 ./rele
 
                  call writeHist(Oscmumu_enu_real(m,iHist), &
                       & file='oscillations_mumu_real_'//trim(filename1)//"."// &
-diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/esample.f90 ./release2016/code/init/neutrino/esample.f90
 --- ./release2016/code/init/neutrino/esample.f90	2016-07-11 11:30:45.965055046 +0100
 +++ ./release2016/code/init/neutrino/esample.f90	2016-07-11 11:12:28.904968886 +0100
-@@ -104,10 +104,11 @@
-     fileName = trim(fluxfilename)
-     ! If file name is a fully qualified path then assume it points to a flux
-     ! file not from the buuinput directory.
--    if((fileName(1:1).ne.'/').ne.(fileName(1:2).ne.'./')) then
-+    if(.not.(fileName(1:1) == '/')) then
-       fileName = trim(path_to_Input)//'/neutrino/'//trim(fluxfilename)
-     end if
--
-+    !   Now reading of flux file from buuinput/neutrinos
-+    fileName=trim(path_to_Input)//'/neutrino/'//trim(fluxfilename)
-     call Write_ReadingInput(fileName,0)
+@@ -100,8 +100,14 @@
+     write(*,*) "Enu_true_upper_cut =",Enu_upper_cut
+     write(*,*) "E-Limit for Qs-Reconstruction =",energylimit_for_Qsrec 
  
-     open(13,file=filename,status='old',action='read',iostat=ierr)diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/expNeutrinofluxes.f90 ./release2016/code/init/neutrino/expNeutrinofluxes.f90
---- ./release2016/code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:30:46.011636255 +0100
+-    !   Now reading of flux file from buuinput/neutrinos
++
++    fileName = trim(fluxfilename)
++    ! If file name is a fully qualified path then assume it points to a flux
++    ! file not from the buuinput directory.
++    if((fileName(1:1).ne.'/').and.(fileName(1:2).ne.'./')) then
+     fileName=trim(path_to_Input)//'/neutrino/'//trim(fluxfilename)
++    end if
++
+     call Write_ReadingInput(fileName,0)
+     
+     open(13,file=filename,status='old',action='read',iostat=ierr)--- ./release2016/code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:30:46.011636255 +0100
 +++ ./release2016/code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:27:35.433825838 +0100
 @@ -31,6 +31,7 @@
    public ::  LBNOenergyNU
@@ -266,7 +264,6 @@ diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/esample.f90 ./release2
 +
 
   end module expNeutrinofluxes
-diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/initNeutrino.f90 ./release2016/code/init/neutrino/initNeutrino.f90
 --- ./release2016/code/init/neutrino/initNeutrino.f90	2016-07-11 11:30:45.965055046 +0100
 +++ ./release2016/code/init/neutrino/initNeutrino.f90	2016-07-11 11:19:27.095923439 +0100
 @@ -14,6 +14,7 @@
@@ -340,7 +337,6 @@ diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/initNeutrino.f90 ./rel
                 eNev(k)%lepton_in%momentum,&
                 eNev(k)%lepton_out%momentum,&
                 eNev(k)%boson%momentum,&
-diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/neutrinoProdInfo.f90 ./release2016/code/init/neutrino/neutrinoProdInfo.f90
 --- ./release2016/code/init/neutrino/neutrinoProdInfo.f90	2016-07-11 11:30:45.967221614 +0100
 +++ ./release2016/code/init/neutrino/neutrinoProdInfo.f90	2016-07-11 11:22:32.021160246 +0100
 @@ -20,6 +20,7 @@
@@ -438,7 +434,6 @@ diff -urw -x 'Makefile*' ./release2016/code/init/neutrino/neutrinoProdInfo.f90 .
         write(*,'("** neutrinoProdInfo(",i7,")    prod_id=",i7,"   perweight=",1P,e13.4,0P)') i,prod_id,perweight
 
      else
-diff -urw -x 'Makefile*' ./release2016/code/inputOutput/EventOutputFile.f90 ./release2016/code/inputOutput/EventOutputFile.f90
 --- ./release2016/code/inputOutput/EventOutputFile.f90	2016-07-11 11:30:52.203687256 +0100
 +++ ./release2016/code/inputOutput/EventOutputFile.f90	2016-07-11 11:24:03.229334844 +0100
 @@ -351,7 +351,7 @@
@@ -461,14 +456,13 @@ diff -urw -x 'Makefile*' ./release2016/code/inputOutput/EventOutputFile.f90 ./re
      case (hiLepton)
        if (.not. present(iFE)) return
        if (EventInfo_HiLep_Get (0,iFE,Weight,nu,Q2,eps,evtType,phi_Lepton=phiL)) &
-diff -urw -x 'Makefile*' ./release2016/code/init/lowElectron/lepton2p2h.f90 ./release2016/code/init/lowElectron/lepton2p2h.f90
 --- ./release2016/code/init/lowElectron/lepton2p2h.f90    2016-07-11 13:34:43.599364546 +0100
 +++ ./release2016/code/init/lowElectron/lepton2p2h.f90    2016-07-11 10:42:29.713038656 +0100
 @@ -857,6 +857,8 @@
      real :: qvec2
      integer :: IP
 
-+    IP = eN%idProcess
++    IP = abs(eN%idProcess)
 +
      qvec2 = Q2 + omega**2
  !   vector and axial coupling constants and cutoff masses
