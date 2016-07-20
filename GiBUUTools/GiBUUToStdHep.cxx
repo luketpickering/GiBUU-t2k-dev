@@ -14,7 +14,7 @@
 #include "TRegexp.h"
 #include "TTree.h"
 #include "TVector3.h"
-#include "TH1F.h"
+#include "TH1D.h"
 
 #include "LHEF.hpp"
 
@@ -757,7 +757,7 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
                                    (FluxValues[FluxValues.size() - 1].first -
                                     BinLowEdges[FluxValues.size() - 1]);
 
-  TH1F *fluxHist = new TH1F(
+  TH1D *fluxHist = new TH1D(
       histname.c_str(), (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.)").c_str(),
       FluxValues.size(), BinLowEdges.get());
 
