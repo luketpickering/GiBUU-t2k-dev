@@ -14,6 +14,7 @@
 #include "TRegexp.h"
 #include "TTree.h"
 #include "TVector3.h"
+#include "TH1F.h"
 
 #include "LHEF.hpp"
 
@@ -111,6 +112,8 @@ bool HaveProdChargeInfo = false;
 
 ///\brief Whether to remove events which have a zero weight.
 bool SaveNoWeight = true;
+
+std::vector<std::pair<std::string, std::string> > FluxFilesToAdd;
 }
 
 struct GiBUUPartBlob {
@@ -716,6 +719,55 @@ int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
   // return 0;
 }
 
+void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
+  std::ifstream ifs(fileloc);
+  if (!ifs.good()) {
+    std::cerr << "[ERROR]: File \"" << fileloc
+              << " could not be opened for reading." << std::endl;
+    return;
+  }
+  std::string line;
+
+  size_t ln = 0;
+  std::vector < std::pair<float, float> > FluxValues;
+  while (std::getline(ifs, line)) {
+    if (line[0] == '#') {  // ignore comments
+      ln++;
+      continue;
+    }
+    std::vector<float> splitLine =
+        Utils::StringVToFloatV(Utils::SplitStringByDelim(line, " "));
+    if (splitLine.size() != 2) {
+      std::cout << "[WARN]: ingoring line: \"" << line
+                << "\" in input flux file." << std::endl;
+      continue;
+    }
+    FluxValues.push_back(std::make_pair(splitLine.front(), splitLine.back()));
+  }
+  ifs.close();
+
+  std::unique_ptr<float[]> BinLowEdges(new float[FluxValues.size() + 1]);
+  for (size_t bin_it = 1; bin_it < FluxValues.size(); ++bin_it) {
+    BinLowEdges[bin_it] =
+        FluxValues[bin_it - 1].first +
+        (FluxValues[bin_it].first - FluxValues[bin_it - 1].first) / 2.0;
+  }
+  BinLowEdges[0] = FluxValues[0].first - (BinLowEdges[1] - FluxValues[0].first);
+  BinLowEdges[FluxValues.size()] = FluxValues[FluxValues.size() - 1].first +
+                                   (FluxValues[FluxValues.size() - 1].first -
+                                    BinLowEdges[FluxValues.size() - 1]);
+
+  TH1F *fluxHist = new TH1F(
+      histname.c_str(), (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.)").c_str(),
+      FluxValues.size(), BinLowEdges.get());
+
+  for (Int_t bin_it = 1; bin_it < fluxHist->GetNbinsX() + 1; bin_it++) {
+    fluxHist->SetBinContent(bin_it, FluxValues[bin_it].second);
+  }
+
+  fluxHist->Write();
+}
+
 int GiBUUToStdHep() {
   TFile *outFile = new TFile(GiBUUToStdHepOpts::OutFName.c_str(), "RECREATE");
   if (!outFile->IsOpen()) {
@@ -741,6 +793,11 @@ int GiBUUToStdHep() {
   }
 
   rooTrackerTree->Write();
+
+  for (auto const &ff : GiBUUToStdHepOpts::FluxFilesToAdd) {
+    SaveFluxFile(ff.second, ff.first);
+  }
+
   outFile->Write();
   outFile->Close();
   delete giRooTracker;
@@ -1135,6 +1192,25 @@ void SetOpts() {
                   },
                   false, [&]() { GiBUUToStdHepOpts::SaveNoWeight = false; },
                   "Save events that have a weight of 0.");
+
+  CLIArgs::AddOpt("-F", "--Save-Flux-File", true,
+                  [&](std::string const &opt) -> bool {
+                    auto const &split = Utils::SplitStringByDelim(opt, ",");
+                    if (split.size() != 2) {
+                      std::cout << "[ERROR]: Expected -F argument to look like "
+                                   "`histname,inputfilename.txt`."
+                                << std::endl;
+                      return false;
+                    }
+
+                    std::cout << "\t--Saving Flux histogram: " << split.front()
+                              << ", from input: " << split.back() << std::endl;
+                    GiBUUToStdHepOpts::FluxFilesToAdd.push_back(
+                        std::make_pair(split.front(), split.back()));
+                    return true;
+                  },
+                  false, [&]() {},
+                  "[output_hist_name,input_text_flux_file.txt]");
 }
 
 int main(int argc, char const *argv[]) {
