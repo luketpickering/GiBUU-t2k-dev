@@ -757,12 +757,13 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
                                    (FluxValues[FluxValues.size() - 1].first -
                                     BinLowEdges[FluxValues.size() - 1]);
 
+
   TH1D *fluxHist = new TH1D(
       histname.c_str(), (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.)").c_str(),
       FluxValues.size(), BinLowEdges.get());
 
   for (Int_t bin_it = 1; bin_it < fluxHist->GetNbinsX() + 1; bin_it++) {
-    fluxHist->SetBinContent(bin_it, FluxValues[bin_it].second);
+    fluxHist->SetBinContent(bin_it, FluxValues[bin_it-1].second);
   }
 
   fluxHist->Write();
