@@ -797,8 +797,8 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     case 30:
     case 31: {  // CCResonance
       return (IsNu ? 1 : -1) *
-             (28 + ((PrimaryProdCharge == -10) ? 0 : PrimaryProdCharge) +
-              20 * (!IsCC));
+             (5 + ((PrimaryProdCharge == -10) ? 0 : PrimaryProdCharge) +
+              43 * (!IsCC));
     }
     case 32:
     case 33: { // 1Pi Bkg

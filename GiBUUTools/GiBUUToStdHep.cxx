@@ -10,11 +10,11 @@
 #include <unistd.h>
 
 #include "TFile.h"
+#include "TH1D.h"
 #include "TLorentzVector.h"
 #include "TRegexp.h"
 #include "TTree.h"
 #include "TVector3.h"
-#include "TH1D.h"
 
 #include "LHEF.hpp"
 
@@ -729,7 +729,7 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   std::string line;
 
   size_t ln = 0;
-  std::vector < std::pair<float, float> > FluxValues;
+  std::vector<std::pair<float, float> > FluxValues;
   while (std::getline(ifs, line)) {
     if (line[0] == '#') {  // ignore comments
       ln++;
@@ -852,6 +852,7 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
     TRegexp matchExp(matchPat.c_str(), true);
     /* print all the files and directories within directory */
     Ssiz_t len = 0;
+    size_t NFilesAdded = 0;
     while ((ent = readdir(dir)) != NULL) {
       if (matchExp.Index(TString(ent->d_name), &len) != Ssiz_t(-1)) {
         std::cout << "\t\t\tAdding matching file: " << (dirpath + ent->d_name)
@@ -863,10 +864,17 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
         GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
         GiBUUToStdHepOpts::TargetZs.push_back(TargetZ);
         GiBUUToStdHepOpts::CCFiles.push_back(IsCC);
-        GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight);
+        NFilesAdded++;
       }
     }
     closedir(dir);
+
+    for (size_t file_it = 0; file_it < NFilesAdded; ++file_it) {
+      GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight /
+                                                    double(NFilesAdded));
+    }
+    std::cout << "[INFO]: Added " << NFilesAdded << " overall file weight: "
+              << (FileExtraWeight / double(NFilesAdded)) << std::endl;
   } else {
     /* could not open directory */
     perror("");
@@ -935,7 +943,10 @@ void SetOpts() {
           GiBUUToStdHepOpts::FileExtraWeights.pop_back();
         }
 
-        return AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
+        size_t NFilesAdded =
+            AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
+
+        return NFilesAdded;
       },
       false, []() { GiBUUToStdHepOpts::InpIsFE = false; }, "<File Name>");
 

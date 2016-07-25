@@ -1,28 +1,28 @@
 #ifndef SEEN_GIBUUToStdHep_UTILS_HXX
 #define SEEN_GIBUUToStdHep_UTILS_HXX
 
-#include <cstdlib>
 #include <cerrno>
 #include <climits>
+#include <cstdlib>
 
+#include <functional>
 #include <sstream>
 #include <string>
-#include <functional>
 
-#include <vector>
 #include <iostream>
+#include <vector>
 
 #include "Rtypes.h"
 
-///Utilities which may be helpful for processing GiBUU specific output.
+/// Utilities which may be helpful for processing GiBUU specific output.
 namespace GiBUUUtils {
 
 ///\brief Converts a GiBUU particle code, with associated particle EM charge
-///information to a PDG code.
+/// information to a PDG code.
 ///
 /// From https://gibuu.hepforge.org/trac/wiki/ParticleIDs
 ///\note Returns 0 when encountering an unknown particle.
-///Current codes converted:
+/// Current codes converted:
 /// - GiBUU : PDG
 /// - 1 : p=2212, n=2112
 /// - 2 : Delta++=2224, Delta+=2214, Delta0=2114, Delta−=1114
@@ -51,32 +51,45 @@ namespace GiBUUUtils {
 /// - 911 : 12
 /// - 912 : 14
 /// - 999 : 22
-int GiBUUToPDG(int GiBUUCode, int GiBUUCharge=0);
+int GiBUUToPDG(int GiBUUCode, int GiBUUCharge = 0);
 
-std::tuple<Int_t,Int_t,Int_t> DecomposeGiBUUHistory(Long_t HistCode);
+std::tuple<Int_t, Int_t, Int_t> DecomposeGiBUUHistory(Long_t HistCode);
 std::string WriteGiBUUHistory(Long_t HistCode);
 ///\brief Converts a GiBUU interaction code to the corresponding NEUT code
-///where possible.
+/// where possible.
 ///
-///Sometimes the NEUT code is dependent on the particle produced in the intial
-///interaction.
-///\note Current codes converted:
-/// - 1 = QE
-/// - 2-31 = res (specific number represents GiBUU particle id for resonance)
-/// - 32,33 = 1pi
-/// - 34 = DIS
-/// - 35,36 = 2p2h
-/// - 37 = 2pi
+/// Sometimes the NEUT code is dependent on the particle produced in the intial
+/// interaction.
+/// CC:
+/// * 1 : QE
+/// * 2 : 2p2h
+/// * 10 : Single pion background (non-resonant)
+/// * 11 : Delta++ ( -11 : Delta- for nubar)
+/// * 12 : Delta+ (-12 : Delta0 for nubar)
+/// * 21 : Multi pion production
+/// * 26 : DIS
+/// * 4 : Higher resonance, charge: -1
+/// * 5 : Higher resonance, charge: 0
+/// * 6 : Higher resonance, charge: +1
+/// * 7 : Higher resonance, charge: +2
 ///
-///From https://gibuu.hepforge.org/trac/wiki/LesHouches
-int GiBUU2NeutReacCode(Int_t GiBUUCode,
-  Int_t const * const StdHepPDGArray,
-  Long_t const * const HistoryArray,
-  Int_t StdHepN,
-  bool IsCC=true,
-  Int_t StruckNucleonPosition=-1,
-  Int_t PrimaryProdCharge=-10);
-
+/// NC:
+/// * 30 : Single pion background (non-resonant)
+/// * 31 : Delta0
+/// * 32 : Delta+
+/// * 41 : Multi pion production
+/// * 46 : DIS
+/// * 47 : Higher resonance, charge: -1
+/// * 48 : Higher resonance, charge: 0
+/// * 49 : Higher resonance, charge: +1
+/// * 50 : Higher resonance, charge: +2
+/// * 51 : NCEL proton-target
+/// * 52 : NCEL neutron-target
+/// From https://gibuu.hepforge.org/trac/wiki/LesHouches
+int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const* const StdHepPDGArray,
+                       Long_t const* const HistoryArray, Int_t StdHepN,
+                       bool IsCC = true, Int_t StruckNucleonPosition = -1,
+                       Int_t PrimaryProdCharge = -10);
 }
 
 #endif
