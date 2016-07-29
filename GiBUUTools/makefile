@@ -42,7 +42,7 @@ all: $(TARGET) BinEdgeToBinCenterPDFFlux.exe
 
 ../GiBUUInstall/release2016:
 	mkdir -p ../GiBUUInstall;
-	cd ../GiBUUInstall; svn co -r 6904 http://gibuu.hepforge.org/svn/releases/release2016 ./release2016
+	cd ../GiBUUInstall; svn co http://gibuu.hepforge.org/svn/releases/release2016 ./release2016
 
 ../GiBUUInstall/buuinput_1_6:
 	mkdir -p ../GiBUUInstall;
