@@ -93,7 +93,7 @@ std::vector<int> TargetZs;
 ///  `GiBUUToStdHep.exe ... -c ...'
 std::vector<bool> CCFiles;
 std::vector<float> FileExtraWeights;
-float OverallWeight;
+float OverallWeight = 1;
 ///\brief The maximum number of input entries to process.
 ///
 ///\note Set by
@@ -757,13 +757,12 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
                                    (FluxValues[FluxValues.size() - 1].first -
                                     BinLowEdges[FluxValues.size() - 1]);
 
-
   TH1D *fluxHist = new TH1D(
       histname.c_str(), (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.)").c_str(),
       FluxValues.size(), BinLowEdges.get());
 
   for (Int_t bin_it = 1; bin_it < fluxHist->GetNbinsX() + 1; bin_it++) {
-    fluxHist->SetBinContent(bin_it, FluxValues[bin_it-1].second);
+    fluxHist->SetBinContent(bin_it, FluxValues[bin_it - 1].second);
   }
 
   fluxHist->Write();
@@ -1132,7 +1131,8 @@ void SetOpts() {
                     GiBUUToStdHepOpts::OverallWeight = ival;
                     return true;
                   },
-                  false, []() {}, "[i]<Next file extra weight [1.0/]'W'>");
+                  false, []() { GiBUUToStdHepOpts::OverallWeight = 1; },
+                  "[i]<Overall extra weight [1.0/]'W'>");
 
   CLIArgs::AddOpt(
       "-v", "--GiBUUToStdHepOpts::verbosity", true,
