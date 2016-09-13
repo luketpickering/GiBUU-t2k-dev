@@ -8,6 +8,7 @@
 
 // Unix
 #include <unistd.h>
+#include <dirent.h>
 
 #include "TFile.h"
 #include "TH1D.h"
@@ -15,8 +16,6 @@
 #include "TRegexp.h"
 #include "TTree.h"
 #include "TVector3.h"
-
-#include "LHEF.hpp"
 
 #include "LUtils/CLITools.hxx"
 #include "LUtils/Utils.hxx"
@@ -62,10 +61,7 @@ namespace GiBUUToStdHepOpts {
 std::vector<std::string> InpFNames;
 /// The name of the output root file to write.
 std::string OutFName;
-/// Whether the input is a FinalEvents.dat type file.
-bool InpIsFE;
-/// Whether the input is a LesHouchesXXX.xml type files.
-bool InpIsLH;
+
 /// Whether the GiBUU output contains struck nucleon information.
 bool HaveStruckNucleonInfo;
 
@@ -599,126 +595,6 @@ LHAdditionInfoLine ParseAdditionInfoLine(std::string const &optLine) {
   return info;
 }
 
-int ParseLesHouchesFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
-  return 1;
-  // size_t EvNum = 0;
-  // LHPC::LhefParser LHEFParser(GiBUUToStdHepOpts::InpFNames.front(), true);
-
-  // LHPC::LHEF::LhefEvent const &currentEvent = LHEFParser.getEvent();
-  // while (LHEFParser.readNextEvent()) {
-  //   auto const &ExtraInfo =
-  //       ParseAdditionInfoLine(currentEvent.getOptionalInformation());
-
-  //   giRooTracker->EvtNum = currentEvent.getEventNumberInFile();
-
-  //   // neutrino
-  //   giRooTracker->StdHepPdg[0] = GiBUUToStdHepOpts::nuType;
-  //   giRooTracker->StdHepStatus[0] = -1;
-  //   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] =
-  //       ExtraInfo.Nu4Mom.X();
-  //   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] =
-  //       ExtraInfo.Nu4Mom.Y();
-  //   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] =
-  //       ExtraInfo.Nu4Mom.Z();
-  //   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] =
-  //   ExtraInfo.Nu4Mom.E();
-
-  //   giRooTracker->GiBUUPerWeight = ExtraInfo.EvWeight;
-
-  //   // target
-  //   giRooTracker->StdHepPdg[1] = Utils::MakeNuclearPDG(
-  //       GiBUUToStdHepOpts::TargetZ, GiBUUToStdHepOpts::TargetA);
-  //   giRooTracker->StdHepStatus[1] = 11;
-  //   giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] =
-  //       ExtraInfo.StruckNuc4Mom.X();
-  //   giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] =
-  //       ExtraInfo.StruckNuc4Mom.Y();
-  //   giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] =
-  //       ExtraInfo.StruckNuc4Mom.Z();
-  //   giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
-  //       GiBUUToStdHepOpts::TargetA;
-
-  //   // lepout
-  //   giRooTracker->StdHepPdg[2] = (GiBUUToStdHepOpts::nuTypes[0] - 1);  // you
-  //   hope.
-  //   giRooTracker->StdHepStatus[2] = 1;
-  //   giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx] =
-  //       ExtraInfo.ChargedLepton4Mom.X();
-  //   giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy] =
-  //       ExtraInfo.ChargedLepton4Mom.Y();
-  //   giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz] =
-  //       ExtraInfo.ChargedLepton4Mom.Z();
-  //   giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE] =
-  //       ExtraInfo.ChargedLepton4Mom.E();
-
-  //   giRooTracker->GiBUUReactionCode = ExtraInfo.EvId;
-
-  //   giRooTracker->StdHepN = 3;
-
-  //   if (GiBUUToStdHepOpts::Verbosity > 1) {
-  //     std::cout << "\n[INFO]: EvNo: " << currentEvent.getEventNumberInFile()
-  //               << ", contained " << (currentEvent.getNumberOfParticles() +
-  //               3)
-  //               << " particles."
-  //               << "\n\tGiBUUReactionCode: " <<
-  //               giRooTracker->GiBUUReactionCode
-  //               << ", NeutConventionReactionCode: "
-  //               << "0"  // Not dealing with LH
-  //                       // conversions at the moment.
-  //               << "\n\t[Lep In] : " << ExtraInfo.Nu4Mom << std::endl;
-  //     std::cout << "\t[Target]  : " << giRooTracker->StdHepPdg[1] <<
-  //     std::endl;
-  //     if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
-  //       std::cout << "\t[Nuc In] : " << ExtraInfo.StruckNuc4Mom << std::endl;
-  //     }
-  //   }
-
-  //   for (size_t i = 0; i < size_t(currentEvent.getNumberOfParticles()); ++i)
-  //   {
-  //     LHPC::LHEF::ParticleLine const &p = currentEvent.getLine(i + 1);
-
-  //     TLorentzVector fourmom(p.getXMomentum(), p.getYMomentum(),
-  //                            p.getZMomentum(), p.getEnergy());
-
-  //     if (GiBUUToStdHepOpts::Verbosity > 1) {
-  //       std::cout << "\t[" << std::setw(2) << i << "](" << std::setw(5)
-  //                 << p.getParticleCode() << ")" << fourmom << std::endl;
-  //     }
-
-  //     giRooTracker->StdHepPdg[giRooTracker->StdHepN] = p.getParticleCode();
-  //     giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1;
-  //     giRooTracker->StdHepP4[giRooTracker->StdHepN]
-  //                           [GiRooTracker::kStdHepIdxPx] = p.getXMomentum();
-  //     giRooTracker->StdHepP4[giRooTracker->StdHepN]
-  //                           [GiRooTracker::kStdHepIdxPy] = p.getYMomentum();
-  //     giRooTracker->StdHepP4[giRooTracker->StdHepN]
-  //                           [GiRooTracker::kStdHepIdxPz] = p.getZMomentum();
-  //     giRooTracker->StdHepP4[giRooTracker->StdHepN][GiRooTracker::kStdHepIdxE]
-  //     =
-  //         p.getEnergy();
-
-  //     giRooTracker->GiBUU2NeutCode = 0;
-  //     giRooTracker->StdHepN++;
-  //   }
-
-  //   if (GiBUUToStdHepOpts::Verbosity > 1) {
-  //     std::cout << "\t[Lep Out]: " << ExtraInfo.ChargedLepton4Mom <<
-  //     std::endl;
-  //   }
-
-  //   EvNum++;
-  //   OutputTree->Fill();
-  //   giRooTracker->Reset();
-
-  //   if (GiBUUToStdHepOpts::MaxEntries == EvNum) {
-  //     std::cout << "Finishing after " << EvNum << " entries." << std::endl;
-  //     break;
-  //   }
-  // }
-  // std::cout << "Read " << EvNum << " events." << std::endl;
-  // return 0;
-}
-
 void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   std::ifstream ifs(fileloc);
   if (!ifs.good()) {
@@ -779,18 +655,14 @@ int GiBUUToStdHep() {
       GiBUUToStdHepOpts::EmulateNuWro ? "nRooTracker" : "giRooTracker",
       "GiBUU StdHepVariables");
   GiRooTracker *giRooTracker = new GiRooTracker();
-  giRooTracker->AddBranches(rooTrackerTree, GiBUUToStdHepOpts::InpIsFE,
+  giRooTracker->AddBranches(rooTrackerTree, true,
                             GiBUUToStdHepOpts::EmulateNuWro &&
                                 GiBUUToStdHepOpts::HaveStruckNucleonInfo,
                             GiBUUToStdHepOpts::EmulateNuWro,
                             GiBUUToStdHepOpts::HaveProdChargeInfo);
 
   int ParserRtnCode = 0;
-  if (GiBUUToStdHepOpts::InpIsLH) {
-    ParserRtnCode = ParseLesHouchesFile(rooTrackerTree, giRooTracker);
-  } else if (GiBUUToStdHepOpts::InpIsFE) {
-    ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
-  }
+  ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
 
   rooTrackerTree->Write();
 
@@ -884,17 +756,28 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
 
 void SetOpts() {
   CLIArgs::AddOpt(
+      "-c", "--CompositeExample", false,
+      [&](std::string const &opt) -> bool {
+        std::cout << "[RUNLIKE]: For a CH2 target with CC and [NC] events and "
+                     "neutrino and {antineutrino} beam components"
+                     ":\n[RUNLIKE]:\tGiBUUToStdHep.exe -u 14 -a 12 -z 6 -w "
+                     "12 -f \"FinalEvents_nu_C_CC_*.dat\" [-N -w 12 -f "
+                     "\"FinalEvents_nu_C_NC_*.dat\"] -a 1 -z 1 -w 2 -f "
+                     "\"FinalEvents_nu_H_CC_*.dat\" [-N -w 2 -f "
+                     "\"FinalEvents_nu_H_NC_*.dat\"] {-u -14 -a 12 -z 6 -w "
+                     "12 -f \"FinalEvents_nub_C_CC_*.dat\" [-N -w 12 -f "
+                     "\"FinalEvents_nub_C_NC_*.dat\"] -a 1 -z 1 -w 2 -f "
+                     "\"FinalEvents_nub_H_CC_*.dat\" [-N -w 2 -f "
+                     "\"FinalEvents_nub_H_NC_*.dat\"]} -R i14"
+                  << std::endl;
+        exit(0);
+      },
+      false, []() {},
+      "<Write example of how to combine GiBUU runs for a composite target>");
+
+  CLIArgs::AddOpt(
       "-f", "--FEinput-file", true,
       [&](std::string const &opt) -> bool {
-
-        if (GiBUUToStdHepOpts::InpIsLH) {
-          std::cerr
-              << "[ERROR] only one style of input allowed, -l already used."
-              << std::endl;
-          return false;
-        }
-
-        GiBUUToStdHepOpts::InpIsFE = true;
 
         bool IsCC = true;
         // If specified as NC take that, otherwise, assume CC
@@ -922,6 +805,8 @@ void SetOpts() {
         int TargetA = GiBUUToStdHepOpts::TargetAs.back();
         int TargetZ = GiBUUToStdHepOpts::TargetZs.back();
 
+        // These get added back by AddFiles so that the number of files and
+        // options are synched
         if (GiBUUToStdHepOpts::nuTypes.size() >
             GiBUUToStdHepOpts::InpFNames.size()) {
           GiBUUToStdHepOpts::nuTypes.pop_back();
@@ -947,27 +832,7 @@ void SetOpts() {
 
         return NFilesAdded;
       },
-      false, []() { GiBUUToStdHepOpts::InpIsFE = false; }, "<File Name>");
-
-  // CLIArgs::AddOpt(
-  //     "-l", "--LHinput-file", true,
-  //     [&](std::string const &opt) -> bool {
-  //       std::cerr << "LesHouches format is currently disabled." << std::endl;
-  //       return false;
-  //       std::cout << "\t--Reading LesHouches Event Format GiBUU file : " <<
-  //       opt
-  //                 << std::endl;
-  //       GiBUUToStdHepOpts::InpFNames.push_back(opt);
-  //       GiBUUToStdHepOpts::InpIsLH = true;
-  //       if (GiBUUToStdHepOpts::InpIsFE) {
-  //         std::cerr
-  //             << "[ERROR] only one style of input allowed, -f already used."
-  //             << std::endl;
-  //         throw 6;
-  //       }
-  //       return true;
-  //     },
-  //     false, []() { GiBUUToStdHepOpts::InpIsLH = false; }, "<File Name>");
+      true, []() {}, "<File Name>");
 
   CLIArgs::AddOpt(
       "-o", "--output-file", true,
@@ -1106,36 +971,40 @@ void SetOpts() {
                     GiBUUToStdHepOpts::FileExtraWeights.push_back(ival);
                     return true;
                   },
-                  false, []() {}, "[i]<Next file extra weight [1.0/]'W'>");
-
-  CLIArgs::AddOpt("-R", "--Total-ReWeight", true,
-                  [&](std::string const &opt) -> bool {
-                    double ival = 0;
-                    bool IsReciprocal = false;
-                    std::string inp = opt;
-                    if (inp[0] == 'i') {
-                      IsReciprocal = true;
-                      inp = Utils::Replace(inp, "i", "");
-                    }
-
-                    try {
-                      ival = Utils::str2d(inp, true);
-                      if (IsReciprocal) {
-                        ival = (1.0 / ival);
-                      }
-                    } catch (...) {
-                      return false;
-                    }
-                    std::cout << "\t--Assigning overall weight: " << ival
-                              << std::endl;
-                    GiBUUToStdHepOpts::OverallWeight = ival;
-                    return true;
-                  },
-                  false, []() { GiBUUToStdHepOpts::OverallWeight = 1; },
-                  "[i]<Overall extra weight [1.0/]'W'>");
+                  false, []() {},
+                  "[i]<Next file extra weight [1.0/]'W' -- You do not need to "
+                  "account for averaging over multiple files included by a "
+                  "wildstar, this is done automagically.>");
 
   CLIArgs::AddOpt(
-      "-v", "--GiBUUToStdHepOpts::verbosity", true,
+      "-R", "--Total-ReWeight", true,
+      [&](std::string const &opt) -> bool {
+        double ival = 0;
+        bool IsReciprocal = false;
+        std::string inp = opt;
+        if (inp[0] == 'i') {
+          IsReciprocal = true;
+          inp = Utils::Replace(inp, "i", "");
+        }
+
+        try {
+          ival = Utils::str2d(inp, true);
+          if (IsReciprocal) {
+            ival = (1.0 / ival);
+          }
+        } catch (...) {
+          return false;
+        }
+        std::cout << "\t--Assigning overall weight: " << ival << std::endl;
+        GiBUUToStdHepOpts::OverallWeight = ival;
+        return true;
+      },
+      false, []() { GiBUUToStdHepOpts::OverallWeight = 1; },
+      "[i]<Overall extra weight [1.0/]'W' -- This is most useful for weighting "
+      "composite targets back to a weight per nucleon>");
+
+  CLIArgs::AddOpt(
+      "-v", "--Verbosity", true,
       [&](std::string const &opt) -> bool {
         int ival = 0;
         try {
@@ -1165,25 +1034,29 @@ void SetOpts() {
                   false, [&]() { GiBUUToStdHepOpts::MaxEntries = -1; },
                   "<Num Entries [<-1>: means all]> [default==-1]");
 
-  CLIArgs::AddOpt(
-      "-I", "--have-Initial-State", false,
-      [&](std::string const &opt) -> bool {
-        GiBUUToStdHepOpts::HaveStruckNucleonInfo = true;
-        std::cout << "\t--Attempting to read initial state Info." << std::endl;
-        return true;
-      },
-      false, [&]() { GiBUUToStdHepOpts::HaveStruckNucleonInfo = false; },
-      "Have struck nucleon information in GiBUU output.");
+  CLIArgs::AddOpt("-NI", "--No-Initial-State", false,
+                  [&](std::string const &opt) -> bool {
+                    GiBUUToStdHepOpts::HaveStruckNucleonInfo = false;
+                    std::cout << "\t--Not expecting FinalEvents.dat to contain "
+                                 "initial state info."
+                              << std::endl;
+                    return true;
+                  },
+                  false,
+                  [&]() { GiBUUToStdHepOpts::HaveStruckNucleonInfo = true; },
+                  "Have struck nucleon information in GiBUU output.");
 
-  CLIArgs::AddOpt(
-      "-P", "--have-Prod-Charge", false,
-      [&](std::string const &opt) -> bool {
-        GiBUUToStdHepOpts::HaveProdChargeInfo = true;
-        std::cout << "\t--Attempting to read prod charge Info." << std::endl;
-        return true;
-      },
-      false, [&]() { GiBUUToStdHepOpts::HaveProdChargeInfo = false; },
-      "Have primary particle charge information in GiBUU output.");
+  CLIArgs::AddOpt("-NP", "--No-Prod-Charge", false,
+                  [&](std::string const &opt) -> bool {
+                    GiBUUToStdHepOpts::HaveProdChargeInfo = false;
+                    std::cout << "\t--Not expecting FinalEvents.dat to contain "
+                                 "neutrino induced resonance charge info."
+                              << std::endl;
+                    return true;
+                  },
+                  false,
+                  [&]() { GiBUUToStdHepOpts::HaveProdChargeInfo = true; },
+                  "Have primary particle charge information in GiBUU output.");
 
   CLIArgs::AddOpt("-E", "--Emulate-NuWro", false,
                   [&](std::string const &opt) -> bool {
