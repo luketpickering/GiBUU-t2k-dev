@@ -7,8 +7,8 @@
 #include <string>
 
 // Unix
-#include <unistd.h>
 #include <dirent.h>
+#include <unistd.h>
 
 #include "TFile.h"
 #include "TH1D.h"
@@ -405,6 +405,14 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
               GiBUUUtils::GiBUUToPDG(std::get<2>(hDec));
         }
         giRooTracker->StdHepN++;
+        if (giRooTracker->StdHepN == (GiRooTracker::kGiStdHepNPmax - 1)) {
+          std::cerr << "[ERROR]: In file " << fname << ", event " << EvNum
+                    << " contained to many final state particles " << ev.size()
+                    << ". Ignoring the last: "(ev.size() -
+                                               GiRooTracker::kGiStdHepNPmax)
+                    << std::endl;
+          break;
+        }
       }
 
       if (BadEv) {
@@ -655,11 +663,10 @@ int GiBUUToStdHep() {
       GiBUUToStdHepOpts::EmulateNuWro ? "nRooTracker" : "giRooTracker",
       "GiBUU StdHepVariables");
   GiRooTracker *giRooTracker = new GiRooTracker();
-  giRooTracker->AddBranches(rooTrackerTree, true,
-                            GiBUUToStdHepOpts::EmulateNuWro &&
+  giRooTracker->AddBranches(
+      rooTrackerTree, true, GiBUUToStdHepOpts::EmulateNuWro &&
                                 GiBUUToStdHepOpts::HaveStruckNucleonInfo,
-                            GiBUUToStdHepOpts::EmulateNuWro,
-                            GiBUUToStdHepOpts::HaveProdChargeInfo);
+      GiBUUToStdHepOpts::EmulateNuWro, GiBUUToStdHepOpts::HaveProdChargeInfo);
 
   int ParserRtnCode = 0;
   ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
@@ -758,18 +765,24 @@ void SetOpts() {
   CLIArgs::AddOpt(
       "-c", "--CompositeExample", false,
       [&](std::string const &opt) -> bool {
-        std::cout << "[RUNLIKE]: For a CH2 target with CC and [NC] events and "
-                     "neutrino and {antineutrino} beam components"
-                     ":\n[RUNLIKE]:\tGiBUUToStdHep.exe -u 14 -a 12 -z 6 -w "
-                     "12 -f \"FinalEvents_nu_C_CC_*.dat\" [-N -w 12 -f "
-                     "\"FinalEvents_nu_C_NC_*.dat\"] -a 1 -z 1 -w 2 -f "
-                     "\"FinalEvents_nu_H_CC_*.dat\" [-N -w 2 -f "
-                     "\"FinalEvents_nu_H_NC_*.dat\"] {-u -14 -a 12 -z 6 -w "
-                     "12 -f \"FinalEvents_nub_C_CC_*.dat\" [-N -w 12 -f "
-                     "\"FinalEvents_nub_C_NC_*.dat\"] -a 1 -z 1 -w 2 -f "
-                     "\"FinalEvents_nub_H_CC_*.dat\" [-N -w 2 -f "
-                     "\"FinalEvents_nub_H_NC_*.dat\"]} -R i14"
-                  << std::endl;
+        std::cout
+            << "[RUNLIKE]: To combine C runs and H runs for a correctly "
+               "weighted (per nucleon) CH2 target with CC and [NC] "
+               "events and "
+               "neutrino and {antineutrino} beam components"
+               ":\n[RUNLIKE]:\tGiBUUToStdHep.exe -u 14 -a 12 -z 6 -W "
+               "12 -f \"FinalEvents_nu_C_CC_*.dat\" [-N -W 12 -f "
+               "\"FinalEvents_nu_C_NC_*.dat\"] -a 1 -z 1 -W 2 -f "
+               "\"FinalEvents_nu_H_CC_*.dat\" [-N -W 2 -f "
+               "\"FinalEvents_nu_H_NC_*.dat\"] {-u -14 -a 12 -z 6 -W "
+               "12 -f \"FinalEvents_nub_C_CC_*.dat\" [-N -W 12 -f "
+               "\"FinalEvents_nub_C_NC_*.dat\"] -a 1 -z 1 -W 2 -f "
+               "\"FinalEvents_nub_H_CC_*.dat\" [-N -W 2 -f "
+               "\"FinalEvents_nub_H_NC_*.dat\"]} -R i14\n[RUNLIKE]: This "
+               "will weight carbon events up by 12 and hydrogen events up by "
+               "2, before weighting all events down by 14 to rescale the "
+               "produced weights to cross section per nucleon."
+            << std::endl;
         exit(0);
       },
       false, []() {},
