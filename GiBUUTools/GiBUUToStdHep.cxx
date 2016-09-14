@@ -405,7 +405,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
               GiBUUUtils::GiBUUToPDG(std::get<2>(hDec));
         }
         giRooTracker->StdHepN++;
-        if (giRooTracker->StdHepN == (GiRooTracker::kGiStdHepNPmax - 1)) {
+        if (giRooTracker->StdHepN == GiRooTracker::kGiStdHepNPmax) {
           std::cerr << "[ERROR]: In file " << fname << ", event " << EvNum
                     << " contained to many final state particles " << ev.size()
                     << ". Ignoring the last: "
