@@ -1,0 +1,4 @@
+#!/bin/sh
+if [[ ! -e 005_Neutrino_T2K-numu.job ]]; then
+  cp @CMAKE_INSTALL_PREFIX@/GiBUUInstall/GiBUU2016/src/GiBUU/testRun/jobCards/005_Neutrino_T2K-numu.job 005_Neutrino_T2K-numu.job;
+fi

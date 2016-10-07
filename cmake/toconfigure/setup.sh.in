@@ -1,0 +1,18 @@
+#!/bin/sh
+
+if ! [[ ":$PATH:" == *":@CMAKE_INSTALL_PREFIX@/bin:"* ]]; then
+  export PATH=@CMAKE_INSTALL_PREFIX@/bin:$PATH
+fi
+
+if [[ ! "${ROOTSYS}" ]] || [[ ! -e "${ROOTSYS}" ]]; then
+  echo "Sourcing ROOT install from: @ROOTSYS@"
+  source "@ROOTSYS@/bin/thisroot.sh"
+fi
+
+export GIBUUTOOLSROOT=@CMAKE_INSTALL_PREFIX@
+
+if [[ "@USE_GIBUU@" != "0" ]]; then
+  echo "Using GiBUU installed at @CMAKE_INSTALL_PREFIX@/GiBUUInstall/GiBUU2016"\
+", with inputs at @CMAKE_INSTALL_PREFIX@/GiBUUInstall/BUUInput/src/BUUInput"
+  export PATH=@CMAKE_INSTALL_PREFIX@/bin/gibuu:$PATH
+fi

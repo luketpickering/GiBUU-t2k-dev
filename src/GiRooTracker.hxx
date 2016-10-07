@@ -29,9 +29,6 @@ struct GiRooTracker {
   ///\warning This is not a one-to-one mapping.
   Int_t GiBUU2NeutCode;
 
-  ///Generator-specific string with 'event code'.
-  TObjString* EvtCode;
-
   ///\brief The GiBUU interaction type.
   Int_t GiBUUReactionCode;
   ///\brief The charge of the first particle produced in the neutrino interaction.
@@ -59,7 +56,7 @@ struct GiRooTracker {
   ///\brief The StdHep Status of particles in this event.
   ///
   /// Status Codes in use:
-  /// - -1: Initial state real particle.
+  /// - 0: Initial state real particle.
   /// - 1: Final state real particle.
   Int_t* StdHepStatus; //[StdHepN]
 
@@ -82,15 +79,11 @@ struct GiRooTracker {
   Double_t NumRunsWeight;
 
   ///\brief an arbitrary weight that is passed in at parse time. Useful for
-  ///combining different fluxes or molecular target constituents.
-  Double_t ExtraWeight;
+  ///combining molecular target constituents.
+  Double_t FileExtraWeight;
 
   ///\brief The total XSec weighting that should be applied to this event.
   Double_t EvtWght;
-
-  ///\brief Struck Nucleon PDG code which is turned on when emulating NuWro so
-  ///as not to lose information.
-  Int_t StruckNucleonPDG;
 
   ///\brief Function to reset an instance of this class to its default state.
   ///
@@ -99,7 +92,7 @@ struct GiRooTracker {
 
   ///\brief Will add the relevant output branches to a given TTree.
   void AddBranches(TTree* &tree, bool AddHistory=false,
-    bool AddStruckNucleonPDG=false, bool EmulateNuWro=false, bool AddProdCharge=false);
+    bool AddProdCharge=false);
 
 };
 #endif

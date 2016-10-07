@@ -1,0 +1,61 @@
+#!/bin/sh
+
+NUMRUNS=1
+if [[ "${1}" ]]; then
+  NUMRUNS=${1}
+  echo "[INFO]: Running ${1}x stats..."
+fi
+
+CARDDIR=@CMAKE_INSTALL_PREFIX@/jobcards
+
+if ! hash MakeBUUInputSoftlink &> /dev/null; then
+  echo "[ERROR]: Cannot find the command \"GiBUU.x\", have you built GiBUU?"
+  exit 1
+fi
+
+if ! hash GiBUU.x &> /dev/null; then
+  echo "[ERROR]: Cannot find the command \"GiBUU.x\", have you built GiBUU?"
+  exit 1
+fi
+
+if ! hash GiBUUToStdHep &> /dev/null; then
+  echo "[ERROR]: Cannot find the command \"GiBUUToStdHep\", have you built the GiBUU tools?"
+  exit 1
+fi
+
+OLDPWD=$(pwd)
+
+mkdir -p DUNE_GiBUU_Ar_numuCC
+
+cd DUNE_GiBUU_Ar_numuCC
+
+MakeBUUInputSoftlink
+
+cat ${CARDDIR}/DUNE_Ar_numuCC.job |\
+ sed "s|__BUUINPUT__|../BUUInput|g" |\
+ sed "s|__NUMRUNS__|${NUMRUNS}|g" |\
+ sed "s|__SEED__|${RANDOM}|g" > DUNE_Ar_numuCC.job
+
+mkdir -p Ar_numuCC
+cd Ar_numuCC
+echo "[INFO]: Running Ar events..."
+if ! GiBUU.x < ../DUNE_Ar_numuCC.job  > gibuu.Ar.run; then
+  echo "[ERROR]: Failed to run Ar events:"
+  tail -20 gibuu.Ar.run
+  cd ${OLDPWD}
+  exit 1
+fi
+cd ..
+
+echo "[INFO]: Translating to stdhep..."
+if ! GiBUUToStdHep -u 14 -z 18 -a 22 -f Ar_numuCC/FinalEvents.dat 
+  -F flux_numu,BUUInput/neutrino/T2K_DUNE_250kA-numu.dat -R i13 \
+  -o DUNE_Ar_numuCC.stdhep.root; then
+  echo "[ERROR]: Failed to translate to stdhep format."
+  cd ${OLDPWD}
+  exit 1
+fi
+
+echo "[INFO]: Successfully GiBUU stdhep events."
+
+cd ${OLDPWD}

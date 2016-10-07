@@ -1,0 +1,19 @@
+#!/bin/sh
+
+if [[ ! "${1}" ]] || [[ ! -e "${1}" ]]; then
+  echo "[ERROR]: Expected to be passed a valid stdhep root file."
+  exit 1
+fi
+
+OUPFNAME=CC1pip_Q2_$(echo ${1##*/} | sed "s/stdhep\.//g")
+
+cp @CMAKE_INSTALL_PREFIX@/cint_macros/Select_CC1pip.C .
+
+FOUND=$(echo ${OUPFNAME} | grep "MiniBooNE_CH2")
+
+if [[ "${FOUND}" ]]; then
+  echo "[INFO]: Dumping MiniBooNE CC1pip data into cwd"
+  cp @CMAKE_INSTALL_PREFIX@/compdata/MiniBooNE_1DQ2_numu_CC1pip.dat .
+fi
+
+root -l -b -q "Select_CC1pip.C(\"${1}\",\"${OUPFNAME}\")"

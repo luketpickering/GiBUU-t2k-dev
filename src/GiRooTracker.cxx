@@ -3,7 +3,6 @@
 #include "GiRooTracker.hxx"
 
 GiRooTracker::GiRooTracker() {
-  EvtCode = new TObjString("");
   StdHepPdg = new Int_t[kGiStdHepNPmax];
   StdHepStatus = new Int_t[kGiStdHepNPmax];
   GiBHepHistory = new Long_t[kGiStdHepNPmax];
@@ -15,9 +14,6 @@ GiRooTracker::GiRooTracker() {
 }
 
 GiRooTracker::~GiRooTracker() {
-  if (EvtCode) {
-    delete EvtCode;
-  }
   if (StdHepPdg != nullptr) {
     delete StdHepPdg;
   };
@@ -39,14 +35,12 @@ GiRooTracker::~GiRooTracker() {
 }
 
 void GiRooTracker::Reset() {
-  (*EvtCode) = "";
   GiBUU2NeutCode = 0;
   GiBUUReactionCode = 0;
   GiBUUPrimaryParticleCharge = 0;
   EvtNum = 0;
   StdHepN = 0;
   GiBUUPerWeight = 1.0;
-  StruckNucleonPDG = 0;
 
   Utils::ClearPointer(StdHepPdg, kGiStdHepNPmax);
   Utils::ClearPointer(StdHepStatus, kGiStdHepNPmax);
@@ -58,14 +52,10 @@ void GiRooTracker::Reset() {
 }
 
 void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
-                               bool AddStruckNucleonPDG, bool EmulateNuWro,
                                bool AddProdCharge) {
   tree->Branch("GiBUU2NeutCode", &GiBUU2NeutCode, "GiBUU2NeutCode/I");
   tree->Branch("GiBUUReactionCode", &GiBUUReactionCode, "GiBUUReactionCode/I");
 
-  if (EmulateNuWro) {
-    tree->Branch("EvtCode", &EvtCode);
-  }
   tree->Branch("EvtNum", &EvtNum, "EvtNum/I");
 
   tree->Branch("StdHepN", &StdHepN, "StdHepN/I");
@@ -75,7 +65,7 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
   tree->Branch("StdHepStatus", StdHepStatus, "StdHepStatus[StdHepN]/I");
   tree->Branch("GiBUUPerWeight", &GiBUUPerWeight, "GiBUUPerWeight/D");
   tree->Branch("NumRunsWeight", &NumRunsWeight, "NumRunsWeight/D");
-  tree->Branch("ExtraWeight", &ExtraWeight, "ExtraWeight/D");
+  tree->Branch("FileExtraWeight", &FileExtraWeight, "FileExtraWeight/D");
   tree->Branch("EvtWght", &EvtWght, "EvtWght/D");
 
   if (AddHistory) {
@@ -84,9 +74,6 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
     tree->Branch("GiBHepMother", GiBHepMother, "GiBHepMother[StdHepN]/I");
     tree->Branch("GiBHepGeneration", GiBHepGeneration,
                  "GiBHepGeneration[StdHepN]/I");
-  }
-  if (AddStruckNucleonPDG) {
-    tree->Branch("StruckNucleonPDG", &StruckNucleonPDG, "StruckNucleonPDG/I");
   }
   if (AddProdCharge) {
     tree->Branch("GiBUUPrimaryParticleCharge", &GiBUUPrimaryParticleCharge,

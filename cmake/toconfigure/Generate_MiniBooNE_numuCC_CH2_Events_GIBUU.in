@@ -1,0 +1,82 @@
+#!/bin/sh
+
+NUMRUNS=1
+if [[ "${1}" ]]; then
+  NUMRUNS=${1}
+  echo "[INFO]: Running ${1}x stats..."
+fi
+
+CARDDIR=@CMAKE_INSTALL_PREFIX@/jobcards
+
+if ! hash MakeBUUInputSoftlink &> /dev/null; then
+  echo "[ERROR]: Cannot find the command \"GiBUU.x\", have you built GiBUU?"
+  exit 1
+fi
+
+if ! hash GiBUU.x &> /dev/null; then
+  echo "[ERROR]: Cannot find the command \"GiBUU.x\", have you built GiBUU?"
+  exit 1
+fi
+
+if ! hash GiBUUToStdHep &> /dev/null; then
+  echo "[ERROR]: Cannot find the command \"GiBUUToStdHep\", have you built the GiBUU tools?"
+  exit 1
+fi
+
+OLDPWD=$(pwd)
+
+mkdir -p MiniBooNE_GiBUU_CH_numuCC
+
+cd MiniBooNE_GiBUU_CH_numuCC
+
+MakeBUUInputSoftlink
+
+cat ${CARDDIR}/MiniBooNE_C_numuCC.job |\
+ sed "s|__BUUINPUT__|../BUUInput|g" |\
+ sed "s|__NUMRUNS__|${NUMRUNS}|g" |\
+ sed "s|__SEED__|${RANDOM}|g" > MiniBooNE_C_numuCC.job
+
+cat ${CARDDIR}/MiniBooNE_H_numuCC.job |\
+ sed "s|__BUUINPUT__|../BUUInput|g" |\
+ sed "s|__NUMRUNS__|${NUMRUNS}|g" |\
+ sed "s|__SEED__|${RANDOM}|g" > MiniBooNE_H_numuCC.job
+
+mkdir -p C_numuCC
+cd C_numuCC
+echo "[INFO]: Running C events..."
+if ! GiBUU.x < ../MiniBooNE_C_numuCC.job  > gibuu.C.run; then
+  echo "[ERROR]: Failed to run C events:"
+  tail -20 gibuu.C.run
+  cd ${OLDPWD}
+  exit 1
+fi
+cd ..
+
+mkdir -p H_numuCC
+cd H_numuCC
+
+echo "[INFO]: Running H events..."
+if ! GiBUU.x < ../MiniBooNE_H_numuCC.job  > gibuu.H.run; then
+  echo "[ERROR]: Failed to run H events:"
+  tail -20 gibuu.H.run
+  cd ${OLDPWD}
+  exit 1
+fi
+cd ..
+
+echo "[INFO]: Translating to stdhep..."
+if ! GiBUUToStdHep \
+  -u 14 -z 6 -a 12 -W 12 -f C_numuCC/FinalEvents.dat \
+  -z 1 -a 1 -W 1 -f H_numuCC/FinalEvents.dat \
+  -F flux_numu,BUUInput/neutrino/MiniBooNE-flux.dat -R i13 \
+  -o MiniBooNE_CH2_numuCC.stdhep.root; then
+  echo "[ERROR]: Failed to translate to stdhep format."
+  cd ${OLDPWD}
+  exit 1
+fi
+
+echo "[INFO]: Successfully GiBUU stdhep events."
+
+cp @CMAKE_INSTALL_PREFIX@/compdata/MiniBooNE_1DQ2_numu_CCQE.dat .
+
+cd ${OLDPWD}

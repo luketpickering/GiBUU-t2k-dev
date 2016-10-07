@@ -18,6 +18,7 @@
 #include "TVector3.h"
 
 #include "LUtils/CLITools.hxx"
+#include "LUtils/Debugging.hxx"
 #include "LUtils/Utils.hxx"
 
 #include "GiBUUToStdHep_Utils.hxx"
@@ -57,12 +58,14 @@ inline std::ostream &operator<<(std::ostream &os, TLorentzVector const &tlv) {
 /// Options relevant to the GiBUUToStdHep.exe executable.
 namespace GiBUUToStdHepOpts {
 
-/// The location of the input file which was produced by GiBUU.
+/// The location of the input files which was produced by GiBUU.
 std::vector<std::string> InpFNames;
 /// The name of the output root file to write.
 std::string OutFName;
 
 /// Whether the GiBUU output contains struck nucleon information.
+///
+///\note Assumed true.
 bool HaveStruckNucleonInfo;
 
 ///\brief The neutrino species PDG.
@@ -71,43 +74,41 @@ bool HaveStruckNucleonInfo;
 ///  `GiBUUToStdHep.exe ... -u xx ...'
 /// Required.
 std::vector<int> nuTypes;
-///\brief The target nuclei nucleon number, A.
+///\brief The target nuclei nucleon number, A, for the next input file(s).
 ///
 ///\note Set by
 ///  `GiBUUToStdHep.exe ... -a xx ...'
 /// Required.
 std::vector<int> TargetAs;
-///\brief The target nuclei proton number, Z.
+///\brief The target nuclei proton number, Z, for the next input file(s).
 ///
 ///\note Set by
 ///  `GiBUUToStdHep.exe ... -z xx ...'
 /// Required.
 std::vector<int> TargetZs;
-///\brief Whether input events are simulated NC interactions.
+///\brief Whether input events for the next file(s) are simulated NC
+/// interactions.
 ///
 ///\note Set by
-///  `GiBUUToStdHep.exe ... -c ...'
+///  `GiBUUToStdHep.exe ... -N ...'
 std::vector<bool> CCFiles;
+///\brief An extra weight to apply to the events of the next file(s).
+///
+/// Useful for building composite targets.
 std::vector<float> FileExtraWeights;
+///\brief An extra weight to applied which averages over the number of files
+/// added.
+std::vector<float> NFilesAddedWeights;
+///\brief An extra weight to apply to all parsed events.
+///
+/// Useful for building composite targets.
 float OverallWeight = 1;
-///\brief The maximum number of input entries to process.
-///
-///\note Set by
-///  `GiBUUToStdHep.exe ... -n xx ...'
-size_t MaxEntries;
-///\brief The the debugging verbosity. From 0 (quiet) --- 4 (verbose).
-///
-///\note Set by
-///  `GiBUUToStdHep.exe ... -v xx ...'
-int Verbosity = 0;
 
-///\brief Whether to produce NuWro flavor StdHep output.
-bool EmulateNuWro = false;
-
+///\brief Whether the GiBUU output contains the neutrino-induced hadronic
+/// particles charge.
+///
+///\note Assumed true.
 bool HaveProdChargeInfo = false;
-
-///\brief Whether to remove events which have a zero weight.
-bool SaveNoWeight = true;
 
 std::vector<std::pair<std::string, std::string> > FluxFilesToAdd;
 }
@@ -168,8 +169,7 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
     splitLine = Utils::SplitStringByDelim(ln, " ");
     if (splitLine.size() !=
         (15 + size_t(GiBUUToStdHepOpts::HaveProdChargeInfo))) {
-      std::cout << "[WARN]: Event had malformed particle line: \"" << line
-                << "\"" << std::endl;
+      UDBWarn("Event had malformed particle line: \"" << line << "\"");
       return pblob;
     }
   }
@@ -194,14 +194,12 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
       pblob.ProdCharge = std::stoi(splitLine[15]);
     }
   } catch (const std::invalid_argument &ia) {
-    std::cout << "[WARN]: Failed to parse one of the values: \"" << line << "\""
-              << std::endl;
+    UDBWarn("Failed to parse one of the values: \"" << line << "\"");
     throw;
   }
 
-  if (GiBUUToStdHepOpts::Verbosity > 2) {
-    std::cout << "[PARSED]: " << pblob << std::endl;
-  }
+  UDBVerbose("Parsed particle: " << pblob);
+
   return pblob;
 }
 
@@ -223,8 +221,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     std::ifstream ifs(fname);
 
     if (!ifs.good()) {
-      std::cerr << "[ERROR]: Failed to open " << fname << " for reading."
-                << std::endl;
+      UDBError("Failed to open " << fname << " for reading.");
       return 1;
     }
 
@@ -233,9 +230,8 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     size_t LastEvNum = 0;
     size_t LineNum = 0;
     while (std::getline(ifs, line)) {
-      if (GiBUUToStdHepOpts::Verbosity > 3) {
-        std::cout << "[LINE:" << LineNum << "]: " << line << std::endl;
-      }
+      UDBVerbose("[LINE:" << LineNum << "]: " << line);
+
       if (line[0] == '#') {  // Skip comments
         continue;
         LineNum++;
@@ -243,21 +239,17 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       auto const &part = GetParticleLine(line);
 
       if ((part.PerWeight == 0) &&
-          (!GiBUUToStdHepOpts::HaveStruckNucleonInfo) &&
-          (GiBUUToStdHepOpts::Verbosity > -1)) {
-        std::cout << "[WARN]: Found particle with 0 weight, but do not have "
-                     "initial state information enabled (-v -1 to silence this "
-                     "message)."
-                  << std::endl;
+          (!GiBUUToStdHepOpts::HaveStruckNucleonInfo)) {
+        UDBWarn(
+            "Found particle with 0 weight, but do not have "
+            "initial state information enabled (-v -1 to silence this "
+            "message).");
       }
 
       if ((part.EvNum != int(LastEvNum)) && LastEvNum) {
         FileEvents.push_back(CurrEv);
         ParsedEvs++;
         CurrEv.clear();
-        if (GiBUUToStdHepOpts::MaxEntries == ParsedEvs) {
-          break;
-        }
       }
       CurrEv.push_back(part);
       LastEvNum = part.EvNum;
@@ -270,15 +262,19 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     }
 
     ifs.close();  // Read all the lines.
-    std::cout << "Found " << FileEvents.size() << " events in " << fname << "."
-              << std::endl;
+    UDBLog("Found " << FileEvents.size() << " events in " << fname << ".");
 
-    double NRunsScaleFactor = FileEvents.back().back().Run;
+    double NRunsScaleFactor =
+        GiBUUToStdHepOpts::NFilesAddedWeights[fileNumber] /
+        double(FileEvents.back().back().Run);
     bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fileNumber];
     int FileNuType = GiBUUToStdHepOpts::nuTypes[fileNumber];
     int FileTargetA = GiBUUToStdHepOpts::TargetAs[fileNumber];
     int FileTargetZ = GiBUUToStdHepOpts::TargetZs[fileNumber];
-    double FileExtraWeight = GiBUUToStdHepOpts::FileExtraWeights[fileNumber];
+    double FileExtraWeight =
+        GiBUUToStdHepOpts::FileExtraWeights[fileNumber];
+    double TotalEventReweight =
+        NRunsScaleFactor * FileExtraWeight * GiBUUToStdHepOpts::OverallWeight;
 
     for (auto const &ev : FileEvents) {
       giRooTracker->Reset();
@@ -286,23 +282,12 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       int const &EvNum = ev.front().EvNum;
 
       if (!EvNum) {  // Malformed line
-        if (GiBUUToStdHepOpts::Verbosity > 0) {
-          std::cout << "Skipping event due to malformed line." << std::endl;
-        }
+        UDBWarn("Skipping event due to malformed line.");
         continue;
       }
 
-      if (!(NumEvs % 10000) && (GiBUUToStdHepOpts::Verbosity > 0)) {
-        std::cout << "Read " << NumEvs << " events." << std::endl;
-      }
-
-      if (GiBUUToStdHepOpts::MaxEntries == NumEvs) {
-        std::cout << "Finishing after " << NumEvs << " entries." << std::endl;
-        break;
-      }
-      // Skip very low weight events.
-      if (!GiBUUToStdHepOpts::SaveNoWeight && ev.front().PerWeight < 1E-12) {
-        continue;
+      if (!(NumEvs % 10000)) {
+        UDBInfo("Read " << NumEvs << " events.");
       }
 
       giRooTracker->EvtNum = EvNum;
@@ -319,59 +304,33 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       giRooTracker->StdHepPdg[1] =
           Utils::MakeNuclearPDG(FileTargetZ, FileTargetA);
       giRooTracker->StdHepStatus[1] = 0;
-      if (!GiBUUToStdHepOpts::EmulateNuWro) {
-        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
-        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
-        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
-        giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] = FileTargetA;
-      }
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
+      giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] = FileTargetA;
 
       giRooTracker->GiBUUReactionCode = ev.front().Prodid;
       if (GiBUUToStdHepOpts::HaveProdChargeInfo) {
         giRooTracker->GiBUUPrimaryParticleCharge = ev.front().ProdCharge;
       }
       giRooTracker->GiBUUPerWeight = ev.front().PerWeight;
-      giRooTracker->NumRunsWeight = 1.0 / NRunsScaleFactor;
-      giRooTracker->ExtraWeight = FileExtraWeight;
-      giRooTracker->EvtWght =
-          giRooTracker->GiBUUPerWeight * giRooTracker->NumRunsWeight *
-          giRooTracker->ExtraWeight * GiBUUToStdHepOpts::OverallWeight;
+      giRooTracker->NumRunsWeight = NRunsScaleFactor;
+      giRooTracker->FileExtraWeight = FileExtraWeight;
+      giRooTracker->EvtWght = giRooTracker->GiBUUPerWeight * TotalEventReweight;
 
       giRooTracker->StdHepN = 2;
 
       bool BadEv = false;
       for (auto const &part : ev) {
         if (!part.EvNum) {  // Malformed line
-          if (GiBUUToStdHepOpts::Verbosity) {
-            std::cout << "Skipping event due to malformed line." << std::endl;
-          }
+          UDBWarn("Skipping event due to malformed line.");
           BadEv = true;
           break;
         }
 
-        // Struck nucleon handling depends on output format
         if (GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
-            (giRooTracker->StdHepN == 3) &&
-            (GiBUUToStdHepOpts::EmulateNuWro &&
-             (!giRooTracker->StruckNucleonPDG))) {
-          giRooTracker->StruckNucleonPDG =
-              GiBUUUtils::GiBUUToPDG(part.ID, part.Charge);
-          giRooTracker->StdHepStatus[1] = 0;
-          giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] =
-              part.FourMom.X();
-          giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] =
-              part.FourMom.Y();
-          giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] =
-              part.FourMom.Z();
-          giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] =
-              part.FourMom.E();
-          continue;
-
-        } else if (GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
-                   (giRooTracker->StdHepN ==
-                    3)) {  // Struck nucleon status if not
-          giRooTracker->StdHepStatus[giRooTracker->StdHepN] =
-              11;  // in NuWro mode.
+            (giRooTracker->StdHepN == 3)) {
+          giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
         } else {
           giRooTracker->StdHepStatus[giRooTracker->StdHepN] =
               1;  // All other FS
@@ -379,6 +338,10 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
 
         giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
             GiBUUUtils::GiBUUToPDG(part.ID, part.Charge);
+
+        if (!giRooTracker->StdHepPdg[giRooTracker->StdHepN]) {
+          UDBWarn("Parsed part: " << part << " to have a PDG of 0.");
+        }
 
         giRooTracker->StdHepP4[giRooTracker->StdHepN]
                               [GiRooTracker::kStdHepIdxPx] = part.FourMom.X();
@@ -406,10 +369,10 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
         }
         giRooTracker->StdHepN++;
         if (giRooTracker->StdHepN == GiRooTracker::kGiStdHepNPmax) {
-          std::cerr << "[ERROR]: In file " << fname << ", event " << EvNum
-                    << " contained to many final state particles " << ev.size()
-                    << ". Ignoring the last: "
-                    << (ev.size() - GiRooTracker::kGiStdHepNPmax) << std::endl;
+          UDBWarn("In file " << fname << ", event " << EvNum
+                             << " contained to many final state particles "
+                             << ev.size() << ". Ignoring the last: "
+                             << (ev.size() - GiRooTracker::kGiStdHepNPmax));
           break;
         }
       }
@@ -419,78 +382,47 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       }  // If we broke then don't bother continuing
          // processing.
 
-      if (GiBUUToStdHepOpts::EmulateNuWro &&
-          GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
-          (giRooTracker->GiBUUReactionCode == 2) &&
-          (giRooTracker->StruckNucleonPDG == (FileNuType > 0 ? 2212 : 2112))) {
-        giRooTracker->GiBUU2NeutCode = 11;  // Special case that we know.
-      } else {                              // Try the heuristics.
-        giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
-            giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
-            giRooTracker->GiBHepHistory, giRooTracker->StdHepN, FileIsCC,
-            (GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
-             (!GiBUUToStdHepOpts::EmulateNuWro))
-                ? 3
-                : -1,
-            GiBUUToStdHepOpts::HaveProdChargeInfo
-                ? giRooTracker->GiBUUPrimaryParticleCharge
-                : -10);
-      }
+      giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
+          giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
+          giRooTracker->GiBHepHistory, giRooTracker->StdHepN, FileIsCC,
+          (GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : -1,
+          GiBUUToStdHepOpts::HaveProdChargeInfo
+              ? giRooTracker->GiBUUPrimaryParticleCharge
+              : -10);
 
-      std::stringstream ss("");
-      ss << giRooTracker->GiBUU2NeutCode;
-      giRooTracker->EvtCode->SetString(ss.str().c_str());
-
-      if (GiBUUToStdHepOpts::Verbosity > 1) {
-        std::cout << "[INFO]: EvNo: " << EvNum << ", contained "
-                  << giRooTracker->StdHepN << " (" << ev.size()
-                  << ") particles. "
-                     "Event Weight: "
-                  << std::setprecision(3) << giRooTracker->GiBUUPerWeight
-                  << "\n\tGiBUUReactionCode: "
-                  << giRooTracker->GiBUUReactionCode
-                  << ", NeutConventionReactionCode: "
-                  << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
-                  << TLorentzVector(
-                         giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
-                         giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
-                         giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
-                         giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE])
-                  << std::endl;
-        std::cout << "\t[Target] : " << giRooTracker->StdHepPdg[1] << std::endl;
+      if (UDBDebugging::GetInfoLevel() > 3) {
+        UDBVerbose("[INFO]: EvNo: "
+                << EvNum << ", contained " << giRooTracker->StdHepN << " ("
+                << ev.size() << ") particles. "
+                                "Event Weight: "
+                << std::setprecision(3) << giRooTracker->GiBUUPerWeight
+                << "\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
+                << ", NeutConventionReactionCode: "
+                << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
+                << TLorentzVector(
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE]));
+        UDBVerbose("\t[Target] : " << giRooTracker->StdHepPdg[1]);
         if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
-          if (GiBUUToStdHepOpts::EmulateNuWro) {
-            std::cout
-                << "\t[Nuc In] : "
-                << TLorentzVector(
-                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx],
-                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy],
-                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz],
-                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE])
-                << " (" << std::setw(4) << giRooTracker->StruckNucleonPDG << ")"
-                << std::endl;
-          } else {
-            std::cout
-                << "\t[Nuc In] : "
-                << TLorentzVector(
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
-                << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")"
-                << std::endl;
-          }
+          UDBVerbose("\t[Nuc In] : "
+                  << TLorentzVector(
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
+                  << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")");
         }
 
         // We have already printed the struck nucleon
-        Int_t StartPoint = ((!GiBUUToStdHepOpts::HaveStruckNucleonInfo)
-                                ? 3
-                                : (GiBUUToStdHepOpts::EmulateNuWro ? 3 : 4));
+        Int_t StartPoint =
+            ((!GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : 4);
         for (Int_t stdHepInd = StartPoint; stdHepInd < giRooTracker->StdHepN;
              ++stdHepInd) {
-          std::cout << "\t[" << std::setw(2) << (stdHepInd - (StartPoint))
-                    << "](" << std::setw(5)
-                    << giRooTracker->StdHepPdg[stdHepInd] << ")"
+          UDBVerbose(
+              "\t[" << std::setw(2) << (stdHepInd - (StartPoint)) << "]("
+                    << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd] << ")"
                     << TLorentzVector(
                            giRooTracker->StdHepP4[stdHepInd]
                                                  [GiRooTracker::kStdHepIdxPx],
@@ -500,21 +432,18 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
                                                  [GiRooTracker::kStdHepIdxPz],
                            giRooTracker->StdHepP4[stdHepInd]
                                                  [GiRooTracker::kStdHepIdxE])
-                    << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")"
-                    << std::endl;
+                    << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")");
 
-          std::cout << "\t\t" << GiBUUUtils::WriteGiBUUHistory(
-                                     giRooTracker->GiBHepHistory[stdHepInd])
-                    << std::endl;
+          UDBVerbose("\t\t" << GiBUUUtils::WriteGiBUUHistory(
+                      giRooTracker->GiBHepHistory[stdHepInd]));
         }
-        std::cout << "\t[Lep Out]: "
-                  << TLorentzVector(
-                         giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
-                         giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
-                         giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
-                         giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
-                  << std::endl
-                  << std::endl;
+        UDBVerbose("\t[Lep Out]: "
+                << TLorentzVector(
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
+                << std::endl);
       }
       OutputTree->Fill();
       NumEvs++;
@@ -523,90 +452,14 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     fileNumber++;
   }
 
-  std::cout << "[INFO]: Saved: " << NumEvs
-            << " events, skipped: " << (ParsedEvs - NumEvs)
-            << " because of low weight"
-            << (((ParsedEvs - NumEvs) > 1) ? "s" : "") << "." << std::endl;
+  UDBInfo("Saved " << NumEvs << " events.");
   return 0;
-}
-
-struct LHAdditionInfoLine {
-  LHAdditionInfoLine()
-      : Magic(0),
-        EvId(0),
-        EvWeight(0),
-        Nu4Mom(0, 0, 0, 0),
-        ChargedLepton4Mom(0, 0, 0, 0),
-        StruckNuc4Mom(0, 0, 0, 0) {}
-  Int_t Magic;
-  Int_t EvId;
-  Double_t EvWeight;
-  TLorentzVector Nu4Mom;
-  TLorentzVector ChargedLepton4Mom;
-  TLorentzVector StruckNuc4Mom;
-};
-
-namespace {
-std::ostream &operator<<(std::ostream &os, LHAdditionInfoLine const &info) {
-  return os << "{ "
-            << ", Magic: " << info.Magic << ", EvId: " << info.EvId
-            << ", EvWeight: " << info.EvWeight << ", Nu4Mom: " << info.Nu4Mom
-            << ", ChargedLepton4Mom: " << info.ChargedLepton4Mom
-            << ", StruckNuc4Mom: " << info.StruckNuc4Mom << " }";
-}
-}
-
-LHAdditionInfoLine ParseAdditionInfoLine(std::string const &optLine) {
-  std::string scrubbedLine = optLine.substr(2);  // scrub off the '# ';
-  LHAdditionInfoLine info;
-
-  auto const &splitLine = Utils::SplitStringByDelim(scrubbedLine, " ");
-  if (splitLine.size() !=
-      (11 + (GiBUUToStdHepOpts::HaveStruckNucleonInfo ? 4 : 0))) {
-    std::cout << "[WARN]: Event had malformed additional info line: \""
-              << optLine << "\"" << std::endl;
-    return info;
-  }
-
-  try {
-    info.Magic = std::stoi(splitLine[0]);
-    info.EvId = std::stoi(splitLine[1]);
-    info.EvWeight = std::stof(splitLine[2]);
-    info.Nu4Mom[GiRooTracker::kStdHepIdxE] = std::stof(splitLine[3]);
-    info.Nu4Mom[GiRooTracker::kStdHepIdxPx] = std::stof(splitLine[4]);
-    info.Nu4Mom[GiRooTracker::kStdHepIdxPy] = std::stof(splitLine[5]);
-    info.Nu4Mom[GiRooTracker::kStdHepIdxPz] = std::stof(splitLine[6]);
-    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxE] = std::stof(splitLine[7]);
-    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxPx] =
-        std::stof(splitLine[8]);
-    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxPy] =
-        std::stof(splitLine[9]);
-    info.ChargedLepton4Mom[GiRooTracker::kStdHepIdxPz] =
-        std::stof(splitLine[10]);
-    if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
-      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxE] = std::stof(splitLine[11]);
-      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxPx] = std::stof(splitLine[12]);
-      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxPy] = std::stof(splitLine[13]);
-      info.StruckNuc4Mom[GiRooTracker::kStdHepIdxPz] = std::stof(splitLine[14]);
-    }
-  } catch (const std::invalid_argument &ia) {
-    std::cout << "[WARN]: Failed to parse one of the values: \"" << optLine
-              << "\"" << std::endl;
-    throw;
-  }
-
-  if (GiBUUToStdHepOpts::Verbosity > 2) {
-    std::cout << "[PARSED]: " << info << std::endl;
-  }
-
-  return info;
 }
 
 void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   std::ifstream ifs(fileloc);
   if (!ifs.good()) {
-    std::cerr << "[ERROR]: File \"" << fileloc
-              << " could not be opened for reading." << std::endl;
+    UDBError("File \"" << fileloc << " could not be opened for reading.");
     return;
   }
   std::string line;
@@ -618,16 +471,22 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
       ln++;
       continue;
     }
+    UDBVerbose("Flux file line[" << ln << "]: " << line);
     std::vector<float> splitLine =
-        Utils::StringVToFloatV(Utils::SplitStringByDelim(line, " "));
+        Utils::StringVToFloatV(Utils::SplitStringByDelim(line, " \t,"));
     if (splitLine.size() != 2) {
-      std::cout << "[WARN]: ingoring line: \"" << line
-                << "\" in input flux file." << std::endl;
+      UDBWarn("ingoring line: \"" << line << "\" in input flux file.");
       continue;
     }
     FluxValues.push_back(std::make_pair(splitLine.front(), splitLine.back()));
+    ln++;
   }
   ifs.close();
+
+  if (FluxValues.size() == 0) {
+    UDBError("Found no input lines in" << fileloc);
+    throw;
+  }
 
   std::unique_ptr<float[]> BinLowEdges(new float[FluxValues.size() + 1]);
   for (size_t bin_it = 1; bin_it < FluxValues.size(); ++bin_it) {
@@ -654,18 +513,14 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
 int GiBUUToStdHep() {
   TFile *outFile = new TFile(GiBUUToStdHepOpts::OutFName.c_str(), "RECREATE");
   if (!outFile->IsOpen()) {
-    std::cout << "Couldn't open output file." << std::endl;
+    UDBError("Couldn't open output file.");
     return 2;
   }
 
-  TTree *rooTrackerTree = new TTree(
-      GiBUUToStdHepOpts::EmulateNuWro ? "nRooTracker" : "giRooTracker",
-      "GiBUU StdHepVariables");
+  TTree *rooTrackerTree = new TTree("giRooTracker", "GiBUU StdHepVariables");
   GiRooTracker *giRooTracker = new GiRooTracker();
-  giRooTracker->AddBranches(
-      rooTrackerTree, true, GiBUUToStdHepOpts::EmulateNuWro &&
-                                GiBUUToStdHepOpts::HaveStruckNucleonInfo,
-      GiBUUToStdHepOpts::EmulateNuWro, GiBUUToStdHepOpts::HaveProdChargeInfo);
+  giRooTracker->AddBranches(rooTrackerTree, true,
+                            GiBUUToStdHepOpts::HaveProdChargeInfo);
 
   int ParserRtnCode = 0;
   ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
@@ -689,13 +544,14 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
               int TargetZ, float FileExtraWeight) {
   size_t AsteriskPos = OptVal.find_last_of('*');
   if (AsteriskPos == std::string::npos) {
-    std::cout << "\t--Adding file: " << OptVal << std::endl;
+    UDBLog("\t--Adding file: " << OptVal);
     GiBUUToStdHepOpts::InpFNames.push_back(OptVal);
     GiBUUToStdHepOpts::nuTypes.push_back(NuType);
     GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
     GiBUUToStdHepOpts::TargetZs.push_back(TargetZ);
     GiBUUToStdHepOpts::CCFiles.push_back(IsCC);
     GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight);
+    GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1);
     return true;
   }
 
@@ -707,21 +563,21 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
   if (lastFSlash == std::string::npos) {
     std::unique_ptr<char[]> cwd(new char[1000]);
     getcwd(cwd.get(), sizeof(char) * 1000);
-    std::cout << "\t--Looking in current directory (" << cwd.get()
-              << ") for matching (\"" << matchPat << "\") files." << std::endl;
+    UDBLog("\t--Looking in current directory ("
+           << cwd.get() << ") for matching (\"" << matchPat << "\") files.");
     dirpath = "./";
   } else {
     if (AsteriskPos < lastFSlash) {
-      std::cerr << "[ERROR]: Currently cannot handle a wildcard in the "
-                   "directory structure. Please put input files in the same "
-                   "directory or use separate -f arguments. Expected -f "
-                   "\"../some/rel/path/*.dat\""
-                << std::endl;
+      UDBError(
+          "Currently cannot handle a wildcard in the "
+          "directory structure. Please put input files in the same "
+          "directory or use separate -f arguments (N.B. you will have "
+          "to manually weight each separate file by 1/NFiles). "
+          "Expected -f \"../some/rel/path/*.dat\"");
       return false;
     }
     dirpath = OptVal.substr(0, lastFSlash + 1);
-    std::cout << "\t--Looking in directory (" << dirpath
-              << ") for matching files." << std::endl;
+    UDBLog("\t--Looking in directory (" << dirpath << ") for matching files.");
   }
   dir = opendir(dirpath.c_str());
 
@@ -732,10 +588,10 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
     size_t NFilesAdded = 0;
     while ((ent = readdir(dir)) != NULL) {
       if (matchExp.Index(TString(ent->d_name), &len) != Ssiz_t(-1)) {
-        std::cout << "\t\t\tAdding matching file: " << (dirpath + ent->d_name)
-                  << "(nu: " << NuType << ", A: " << TargetA
-                  << ", Z: " << TargetZ << ", W: " << FileExtraWeight
-                  << ", IsCC: " << IsCC << ")" << std::endl;
+        UDBLog("\t\t\tAdding matching file: "
+               << (dirpath + ent->d_name) << "(nu: " << NuType << ", A: "
+               << TargetA << ", Z: " << TargetZ << ", TW: " << FileExtraWeight
+               << ", IsCC: " << IsCC << ")");
         GiBUUToStdHepOpts::InpFNames.push_back((dirpath + ent->d_name));
         GiBUUToStdHepOpts::nuTypes.push_back(NuType);
         GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
@@ -747,11 +603,13 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
     closedir(dir);
 
     for (size_t file_it = 0; file_it < NFilesAdded; ++file_it) {
-      GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight /
-                                                    double(NFilesAdded));
+      GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight);
+      GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0 /
+                                                      double(NFilesAdded));
     }
-    std::cout << "[INFO]: Added " << NFilesAdded << " overall file weight: "
-              << (FileExtraWeight / double(NFilesAdded)) << std::endl;
+    UDBLog("Added " << NFilesAdded << " overall weight: "
+                    << (FileExtraWeight /
+                        double(NFilesAdded)));
   } else {
     /* could not open directory */
     perror("");
@@ -802,15 +660,14 @@ void SetOpts() {
         if ((!GiBUUToStdHepOpts::nuTypes.size()) ||
             (!GiBUUToStdHepOpts::TargetAs.size()) ||
             (!GiBUUToStdHepOpts::TargetZs.size())) {
-          std::cerr << "[ERROR]: -u X -a Y -z Z must be specified before the "
-                       "first input file."
-                    << std::endl;
+          UDBError(
+              "-u X -a Y -z Z must be specified before the "
+              "first input file.");
           return false;
         }
 
-        std::cout
-            << "\t--Reading FinalEvents-style GiBUU file(s) from descriptor: \""
-            << opt << "\"" << std::endl;
+        UDBLog("\t--Reading FinalEvents-style GiBUU file(s) from descriptor: \""
+               << opt << "\"");
 
         // Assume previous or latest specified otherwise.
         int NuType = GiBUUToStdHepOpts::nuTypes.back();
@@ -839,8 +696,8 @@ void SetOpts() {
           GiBUUToStdHepOpts::FileExtraWeights.pop_back();
         }
 
-        size_t NFilesAdded =
-            AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
+        size_t NFilesAdded = AddFiles(opt, IsCC, NuType, TargetA, TargetZ,
+                                      FileExtraWeight);
 
         return NFilesAdded;
       },
@@ -850,7 +707,7 @@ void SetOpts() {
       "-o", "--output-file", true,
       [&](std::string const &opt) -> bool {
         GiBUUToStdHepOpts::OutFName = opt;
-        std::cout << "\t--Writing to file " << opt << std::endl;
+        UDBLog("\t--Writing to file " << opt);
         return true;
       },
       false, []() { GiBUUToStdHepOpts::OutFName = "GiBUURooTracker.root"; },
@@ -867,14 +724,13 @@ void SetOpts() {
 
                     if (GiBUUToStdHepOpts::nuTypes.size() >
                         GiBUUToStdHepOpts::InpFNames.size()) {
-                      std::cerr << "[ERROR]: Found another -u option before "
-                                   "the next file has been specified."
-                                << std::endl;
+                      UDBError(
+                          "Found another -u option before "
+                          "the next file has been specified.");
                       return false;
                     }
 
-                    std::cout << "\t--Assuming next file has Nu PDG: " << ival
-                              << std::endl;
+                    UDBLog("\t--Assuming next file has Nu PDG: " << ival);
                     GiBUUToStdHepOpts::nuTypes.push_back(ival);
                     return true;
                   },
@@ -885,14 +741,13 @@ void SetOpts() {
 
                     if (GiBUUToStdHepOpts::CCFiles.size() >
                         GiBUUToStdHepOpts::InpFNames.size()) {
-                      std::cerr << "[ERROR]: Found another -N option before "
-                                   "the next file has been specified."
-                                << std::endl;
+                      UDBError(
+                          "Found another -N option before "
+                          "the next file has been specified.");
                       return false;
                     }
 
-                    std::cout << "\t--Assuming next files contains NC event."
-                              << std::endl;
+                    UDBLog("\t--Assuming next files contains NC event.");
                     GiBUUToStdHepOpts::CCFiles.push_back(false);
                     return true;
                   },
@@ -903,9 +758,9 @@ void SetOpts() {
 
                     if (GiBUUToStdHepOpts::TargetAs.size() >
                         GiBUUToStdHepOpts::InpFNames.size()) {
-                      std::cerr << "[ERROR]: Found another -a option before "
-                                   "the next file has been specified."
-                                << std::endl;
+                      UDBError(
+                          "Found another -a option before "
+                          "the next file has been specified.");
                       return false;
                     }
 
@@ -916,9 +771,7 @@ void SetOpts() {
                       return false;
                     }
 
-                    std::cout
-                        << "\t--Assuming next files are target A: " << ival
-                        << std::endl;
+                    UDBLog("\t--Assuming next files are target A: " << ival);
                     GiBUUToStdHepOpts::TargetAs.push_back(ival);
                     return true;
 
@@ -930,9 +783,9 @@ void SetOpts() {
 
                     if (GiBUUToStdHepOpts::TargetZs.size() >
                         GiBUUToStdHepOpts::InpFNames.size()) {
-                      std::cerr << "[ERROR]: Found another -z option before "
-                                   "the next file has been specified."
-                                << std::endl;
+                      UDBError(
+                          "Found another -z option before "
+                          "the next file has been specified.");
                       return false;
                     }
 
@@ -942,9 +795,7 @@ void SetOpts() {
                     } catch (...) {
                       return false;
                     }
-                    std::cout
-                        << "\t--Assuming next files are target Z: " << ival
-                        << std::endl;
+                    UDBLog("\t--Assuming next files are target Z: " << ival);
                     GiBUUToStdHepOpts::TargetZs.push_back(ival);
                     return true;
 
@@ -956,9 +807,9 @@ void SetOpts() {
 
                     if (GiBUUToStdHepOpts::FileExtraWeights.size() >
                         GiBUUToStdHepOpts::InpFNames.size()) {
-                      std::cerr << "[ERROR]: Found another -W option before "
-                                   "the next file has been specified."
-                                << std::endl;
+                      UDBError(
+                          "Found another -W option before "
+                          "the next file has been specified.");
                       return false;
                     }
 
@@ -978,15 +829,11 @@ void SetOpts() {
                     } catch (...) {
                       return false;
                     }
-                    std::cout << "\t--Assigning next file weight: " << ival
-                              << std::endl;
+                    UDBLog("\t--Assigning next file target weight: " << ival);
                     GiBUUToStdHepOpts::FileExtraWeights.push_back(ival);
                     return true;
                   },
-                  false, []() {},
-                  "[i]<Next file extra weight [1.0/]'W' -- You do not need to "
-                  "account for averaging over multiple files included by a "
-                  "wildstar, this is done automagically.>");
+                  false, []() {}, "[i]<Next file target weight [1.0/]'W'>");
 
   CLIArgs::AddOpt(
       "-R", "--Total-ReWeight", true,
@@ -1007,7 +854,7 @@ void SetOpts() {
         } catch (...) {
           return false;
         }
-        std::cout << "\t--Assigning overall weight: " << ival << std::endl;
+        UDBLog("\t--Assigning overall weight: " << ival);
         GiBUUToStdHepOpts::OverallWeight = ival;
         return true;
       },
@@ -1015,22 +862,7 @@ void SetOpts() {
       "[i]<Overall extra weight [1.0/]'W' -- This is most useful for weighting "
       "composite targets back to a weight per nucleon>");
 
-  CLIArgs::AddOpt(
-      "-v", "--Verbosity", true,
-      [&](std::string const &opt) -> bool {
-        int ival = 0;
-        try {
-          ival = Utils::str2i(opt, true);
-        } catch (...) {
-          return false;
-        }
-        std::cout << "\t--GiBUUToStdHepOpts::Verbosity: " << ival << std::endl;
-        GiBUUToStdHepOpts::Verbosity = ival;
-        return true;
-      },
-      false, [&]() { GiBUUToStdHepOpts::Verbosity = 0; }, "<0-4>{default==0}");
-
-  CLIArgs::AddOpt("-n", "--nevs", true,
+  CLIArgs::AddOpt("-v", "--Verbosity", true,
                   [&](std::string const &opt) -> bool {
                     int ival = 0;
                     try {
@@ -1038,20 +870,19 @@ void SetOpts() {
                     } catch (...) {
                       return false;
                     }
-                    std::cout << "\t--Processing " << ival << " events."
-                              << std::endl;
-                    GiBUUToStdHepOpts::MaxEntries = ival;
+                    UDBLog("\t--Verbosity: " << ival);
+                    UDBDebugging::SetDebugLevel(ival);
+                    UDBDebugging::SetInfoLevel(ival);
                     return true;
                   },
-                  false, [&]() { GiBUUToStdHepOpts::MaxEntries = -1; },
-                  "<Num Entries [<-1>: means all]> [default==-1]");
+                  false, [&]() {}, "<0-4>{default==0}");
 
   CLIArgs::AddOpt("-NI", "--No-Initial-State", false,
                   [&](std::string const &opt) -> bool {
                     GiBUUToStdHepOpts::HaveStruckNucleonInfo = false;
-                    std::cout << "\t--Not expecting FinalEvents.dat to contain "
-                                 "initial state info."
-                              << std::endl;
+                    UDBLog(
+                        "\t--Not expecting FinalEvents.dat to contain "
+                        "initial state info.");
                     return true;
                   },
                   false,
@@ -1061,60 +892,40 @@ void SetOpts() {
   CLIArgs::AddOpt("-NP", "--No-Prod-Charge", false,
                   [&](std::string const &opt) -> bool {
                     GiBUUToStdHepOpts::HaveProdChargeInfo = false;
-                    std::cout << "\t--Not expecting FinalEvents.dat to contain "
-                                 "neutrino induced resonance charge info."
-                              << std::endl;
+                    UDBLog(
+                        "\t--Not expecting FinalEvents.dat to contain "
+                        "neutrino induced resonance charge info.");
                     return true;
                   },
                   false,
                   [&]() { GiBUUToStdHepOpts::HaveProdChargeInfo = true; },
                   "Have primary particle charge information in GiBUU output.");
 
-  CLIArgs::AddOpt("-E", "--Emulate-NuWro", false,
-                  [&](std::string const &opt) -> bool {
-                    GiBUUToStdHepOpts::EmulateNuWro = true;
-                    return true;
-                    std::cout << "\t--Outputting in NuWro flavor StdHep."
-                              << std::endl;
-                  },
-                  false, [&]() { GiBUUToStdHepOpts::EmulateNuWro = false; },
-                  "Emulate NuWro StdHep Flavor.");
+  CLIArgs::AddOpt(
+      "-F", "--Save-Flux-File", true,
+      [&](std::string const &opt) -> bool {
+        auto const &split = Utils::SplitStringByDelim(opt, ",");
+        if (split.size() != 2) {
+          UDBLog(
+              "[ERROR]: Expected -F argument to look like "
+              "`histname,inputfilename.txt`.");
+          return false;
+        }
 
-  CLIArgs::AddOpt("-S", "--Save-No-Weight", false,
-                  [&](std::string const &opt) -> bool {
-                    GiBUUToStdHepOpts::SaveNoWeight = true;
-                    return true;
-                    std::cout << "\t--Not saving events with 0 weight."
-                              << std::endl;
-                  },
-                  false, [&]() { GiBUUToStdHepOpts::SaveNoWeight = false; },
-                  "Save events that have a weight of 0.");
-
-  CLIArgs::AddOpt("-F", "--Save-Flux-File", true,
-                  [&](std::string const &opt) -> bool {
-                    auto const &split = Utils::SplitStringByDelim(opt, ",");
-                    if (split.size() != 2) {
-                      std::cout << "[ERROR]: Expected -F argument to look like "
-                                   "`histname,inputfilename.txt`."
-                                << std::endl;
-                      return false;
-                    }
-
-                    std::cout << "\t--Saving Flux histogram: " << split.front()
-                              << ", from input: " << split.back() << std::endl;
-                    GiBUUToStdHepOpts::FluxFilesToAdd.push_back(
-                        std::make_pair(split.front(), split.back()));
-                    return true;
-                  },
-                  false, [&]() {},
-                  "[output_hist_name,input_text_flux_file.txt]");
+        UDBLog("\t--Saving Flux histogram: "
+               << split.front() << ", from input: " << split.back());
+        GiBUUToStdHepOpts::FluxFilesToAdd.push_back(
+            std::make_pair(split.front(), split.back()));
+        return true;
+      },
+      false, [&]() {}, "[output_hist_name,input_text_flux_file.txt]");
 }
 
 int main(int argc, char const *argv[]) {
   try {
     SetOpts();
   } catch (std::exception const &e) {
-    std::cerr << "[ERROR]: " << e.what() << std::endl;
+    UDBError(e.what());
     return 1;
   }
 
@@ -1126,14 +937,14 @@ int main(int argc, char const *argv[]) {
 
   if (GiBUUToStdHepOpts::CCFiles.size() !=
       GiBUUToStdHepOpts::InpFNames.size()) {
-    std::cerr << "[ERROR]: found " << GiBUUToStdHepOpts::CCFiles.size()
-              << " CC/NC event markers and "
-              << GiBUUToStdHepOpts::InpFNames.size() << " input file names."
-              << std::endl
-              << "N.B. the -N argument specifies that the value of the next "
-                 "-f/-l argument is an NC file---argument position is "
-                 "important."
-              << std::endl;
+    UDBError(
+        "found " << GiBUUToStdHepOpts::CCFiles.size()
+                 << " CC/NC event markers and "
+                 << GiBUUToStdHepOpts::InpFNames.size() << " input file names."
+                 << std::endl
+                 << "N.B. the -N argument specifies that the value of the next "
+                    "-f/-l argument is an NC file---argument position is "
+                    "important.");
     return 1;
   }
 

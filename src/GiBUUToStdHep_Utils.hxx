@@ -25,7 +25,7 @@ namespace GiBUUUtils {
 /// Current codes converted:
 /// - GiBUU : PDG
 /// - 1 : p=2212, n=2112
-/// - 2 : Delta++=2224, Delta+=2214, Delta0=2114, Delta−=1114
+/// - 2 : Delta++=2224, Delta+=2214, Delta0=2114, Delta-=1114
 /// - 3 : P11(1440) PDGs: 202212, 202112
 /// - 4 : S11(1535) PDGs : 102212, 102112
 /// - 5 : S11(1650) PDGs : 122212, 122112
@@ -40,12 +40,19 @@ namespace GiBUUUtils {
 /// - 27 : P33(1600) PDGs: 202224, 202214, 202114, 201114
 /// - 32 : Lambda PDG: 3122
 /// - 33 : Sigma PDGs: 3222, 3212, 3112
+/// - 53 : Xi PDG: 3322, 3312
+/// - 56 : Lambda_c PDG: 4122
+/// - 57 : Sigma_c PDG: 4222, 4212, 4112
 /// - 101 : pi+=211, pi0=111, pi-=-211
 /// - 103 : rho+=213, rho0=113, rho-=-213
 /// - 104 : sigma=9000221
 /// - 105 : omega=223
 /// - 110 : K+=321, K0=311
 /// - 111 : K-=-321, K0=-311
+/// - 114 : D PDGs: 411, 421
+/// - 115 : D bar PDGs: -411, -421
+/// - 116 : D star PDGs: 413, 423
+/// - 117 : D bar star PDGs: -413, -423
 /// - 901 : 11
 /// - 902 : 13
 /// - 911 : 12
@@ -85,6 +92,7 @@ std::string WriteGiBUUHistory(Long_t HistCode);
 /// * 50 : Higher resonance, charge: +2
 /// * 51 : NCEL proton-target
 /// * 52 : NCEL neutron-target
+///
 /// From https://gibuu.hepforge.org/trac/wiki/LesHouches
 int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const* const StdHepPDGArray,
                        Long_t const* const HistoryArray, Int_t StdHepN,

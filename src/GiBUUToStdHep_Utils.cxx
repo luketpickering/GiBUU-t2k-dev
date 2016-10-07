@@ -149,6 +149,18 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       }
       return 3212;
     }
+    case 53: {
+      return (GiBUUCharge > 0) ? 3322 : 3312;
+    }
+    case 56: {
+      return 4122;
+    }
+    case 57: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 4222 : 4112;
+      }
+      return 4212;
+    }
     case 101: {
       if (GiBUUCharge) {
         return (GiBUUCharge > 0) ? 211 : -211;
@@ -173,6 +185,18 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 111: {
       return (GiBUUCharge) ? -321 : -311;
     }
+    case 114: {
+      return (GiBUUCharge) ? 411 : 421;
+    }
+    case 115: {
+      return (GiBUUCharge) ? -411 : -421;
+    }
+    case 116: {
+      return (GiBUUCharge) ? 413 : 423;
+    }
+    case 117: {
+      return (GiBUUCharge) ? -413 : -423;
+    }
     case 901: {
       return (GiBUUCharge < 0) ? 11 : -11;
     }
@@ -191,7 +215,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     default: {
       if (GiBUUCode) {
         // std::cout << "[WARN]: Missed a GiBUU PDG Code: " << GiBUUCode
-                  // << std::endl;
+        // << std::endl;
       }
       return 0;
     }
@@ -700,9 +724,9 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     }          // QE
     case 2: {  // delta
       if (PrimaryProdCharge == -10) {
-        return (IsNu ? 1 : -1) * (ResonanceHeuristics(StdHepPDGArray,
-                                                      HistoryArray, StdHepN) +
-                                  ((!IsCC) * 20));
+        return (IsNu ? 1 : -1) *
+               (ResonanceHeuristics(StdHepPDGArray, HistoryArray, StdHepN) +
+                ((!IsCC) * 20));
       }
 
       if (IsCC) {
@@ -801,7 +825,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
               43 * (!IsCC));
     }
     case 32:
-    case 33: { // 1Pi Bkg
+    case 33: {  // 1Pi Bkg
       return (IsNu ? 1 : -1) * (10 + 20 * (!IsCC));
     }
     case 34: {  // DIS
@@ -811,7 +835,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     case 36: {  // MEC/2p-2h
       return (IsNu ? 1 : -1) * 2;
     }
-    case 37: { // MultiPi
+    case 37: {  // MultiPi
       return (IsNu ? 1 : -1) * (21 + 20 * (!IsCC));
     }
     default: {}
