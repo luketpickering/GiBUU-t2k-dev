@@ -1,5 +1,28 @@
 # Further analysis of stdhep events
 
+## Plotting cross sections
+
+  As shown in the Quickstart guide, histograms of event properties must be
+  weighted by each event's `EvtWght`. This weighting does most of the leg-work
+  in scaling the event-rate-like distribution to a flux-averaged cross section.
+  Unlike many other generators, the flux averaging has already taken place as
+  part of the simulation and subsequent processing, there is no need to scale
+  by the number of generated events. For a more complete description of how the
+  GiBUU event weights are calculated and used, see
+  [here](https://gibuu.hepforge.org/trac/wiki/perWeight).
+
+  The final step in producing a flux-averaged differential cross section from
+  the event vector is to divide each bin by it's width. This will result in a
+  binned cross section prediction in units of
+  `10^-38 cm^2 nucleon^-1 <Property Units>^-1`.
+
+  An example of this process is shown below:
+
+  ![example_weighted_histo.pdf](example_weighted_histo.pdf)
+  @image latex example_weighted_histo.pdf "Example effect of correctly weighting histogram fills with the EvtWght, and then dividing by binwidth to produce a differential cross section prediction in squared four momentum transfer." width=0.4\textwidth
+
+## Running event selections
+
   Most analyses will want to post process the particle stack, or make
   selections, or build composite properties. The reader is directed to the
   [NUISANCE](nuisance.hepforge.org) project and the 'GenericFluxTester' tool

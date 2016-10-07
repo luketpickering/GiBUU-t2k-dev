@@ -12,6 +12,7 @@ Here should be the fastest way to make a GiBUU prediction.
 ## Source the environment:
 
   - `source build/Linux/setup.sh`
+    - `Linux` will change depending on your `CMAKE_SYSTEM_NAME`
 
 ## Generate some events
 
@@ -31,14 +32,15 @@ Here should be the fastest way to make a GiBUU prediction.
     [root] giRooTracker->SetAlias("Delta3Mom0","StdHepP4[0][0]-StdHepP4[2][0]");
     [root] giRooTracker->SetAlias("Delta3Mom1","StdHepP4[0][1]-StdHepP4[2][1]");
     [root] giRooTracker->SetAlias("Delta3Mom2","StdHepP4[0][2]-StdHepP4[2][2]");
-    [root] giRooTracker->SetAlias("nQ2","(Delta3Mom0*Delta3Mom0 + Delta3Mom1*Delta3Mom1 +Delta3Mom2*Delta3Mom2) eltaE*DeltaE");
+    [root] giRooTracker->SetAlias("nQ2","(Delta3Mom0*Delta3Mom0 + Delta3Mom1*Delta3Mom1 + Delta3Mom2*Delta3Mom2) - DeltaE*DeltaE");
     [root] TH1 *NQ2 = new TH1D("NQ2",";Q^{2} (GeV^{2});d#sigma/dQ^{2} (cm^{2} GeV^{-2})",20,0,2);
     [root] NQ2->Sumw2();
+    // Weight histogram fills by the event weight and select only CCQE events.
     [root] giRooTracker->Draw("nQ2 >> NQ2","EvtWght*(GiBUU2NeutCode==1)");
-    //Scale to a differential xsec per neutron
+    // Scale to a differential xsec per neutron
     [root] NQ2->Scale(14.E-38/6.,"width");
     [root] NQ2->Draw("E1");
-    //Compare to data
+    // Compare to data
     [root] TGraph comp("MiniBooNE_1DQ2_numu_CCQE.dat");
     [root] comp.Draw("L SAME");
 
@@ -47,7 +49,6 @@ Here should be the fastest way to make a GiBUU prediction.
 
   ![MiniBooNE_quickstart_qe.png](MiniBooNE_quickstart_qe.png)
   @image latex MiniBooNE_quickstart_qe.png "Example comparison of generated GiBUU CCQE events to the MiniBooNE data: Solid line is interpolated data, points are the generated prediction" width=0.6\textwidth
-
 
   If the normalisation looks similar to the above plot, then you're doing
   something right, if it looks awful, or you can't see both series, then

@@ -23,16 +23,16 @@
 
 ## Whole parsing options
 
-    * `(-s|--long-form) <Option Type {default value}> [Required or not]`: Example of an option described by this documentation.
+  * `(-s|--long-form) <Option Type {default value}> [Required or not]`: Example of an option described by this documentation.
 
 
-    * `(-h|--help)`: Print a help message with a usage example.
-    * `(-c|--CompositeExample)`: Print the example usage for building a full CH-target vector including neutrino and anti-neutrino flux components
-    * `(-o|--output-file) <FileName {default:GiBUURooTracker.root}>`: The output file name.
-    * `(-R|--Total-ReWeight) [i]<[1.0/]float>`: The overall weight to apply to the output vector, useful for outputting a composite-target vector with xsec weights in units of `/nucleon`. If the value is prepended with an `i` then the inverse of the numerical part of the option is used, e.g. if `-T i12` is passed, then the file weight will be `1/12`.
-    * `(-NI|--No-Initial-State)`: If you are using an old version of GiBUU which does not output initial state/target nucleon information this will not look for it. GiBUU2016 has initial state information in the output FinalEvents.dat
-    * `(-NP|--No-Prod-Charge)`: If you are using a default version of GiBUU, as opposed to the patched version that can be built by this package, if enabled, this will not expect that information. This makes guessing the NEUT-equivalent mode more tricky as you do not know the charge of the neutrino-induced resonance state.
-    * `(-v|--Verbosity) <0-4>`: Raises the verbosity of the parsing.
+  * `(-h|--help)`: Print a help message with a usage example.
+  * `(-c|--CompositeExample)`: Print the example usage for building a full CH-target vector including neutrino and anti-neutrino flux components
+  * `(-o|--output-file) <FileName {default:GiBUURooTracker.root}>`: The output file name.
+  * `(-R|--Total-ReWeight) [i]<[1.0/]float>`: The overall weight to apply to the output vector, useful for outputting a composite-target vector with xsec weights in units of `/nucleon`. If the value is prepended with an `i` then the inverse of the numerical part of the option is used, e.g. if `-T i12` is passed, then the file weight will be `1/12`.
+  * `(-NI|--No-Initial-State)`: If you are using an old version of GiBUU which does not output initial state/target nucleon information this will not look for it. GiBUU2016 has initial state information in the output FinalEvents.dat
+  * `(-NP|--No-Prod-Charge)`: If you are using a default version of GiBUU, as opposed to the patched version that can be built by this package, if enabled, this will not expect that information. This makes guessing the NEUT-equivalent mode more tricky as you do not know the charge of the neutrino-induced resonance state.
+  * `(-v|--Verbosity) <0-4>`: Raises the verbosity of the parsing.
 
 ## Options which affect the next input file(s)
 
@@ -126,7 +126,7 @@
           -a 1 -z 1 -W 2 -f "FHC_nue_H_CC/FinalEvents_*.dat"\
         -u -12 -a 12 -z 6 -W 12 -f "FHC_nuebar_C_CC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_nuebar_H_CC/FinalEvents_*.dat"\
-        \
+      -N \
         -u 14 -a 12 -z 6 -W 12 -f "FHC_numu_C_NC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_numu_H_NC/FinalEvents_*.dat" \
         -u -14 -a 12 -z 6 -W 12 -f "FHC_numubar_C_NC/FinalEvents_*.dat" \
