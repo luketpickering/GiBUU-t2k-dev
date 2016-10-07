@@ -14,7 +14,7 @@
   To build GiBUUTools:
 
   - Make a build directory: `mkdir build`
-  - Configure the build: `cmake /path/to/source`
+  - Configure the build: `cd build && cmake ../`
   - Optional -- If you want to download, patch, and build a local version of
   GiBUU2016 use `cmake /path/to/source -DUSE_GIBUU=1` instead.
   - Build! `make`.
@@ -25,7 +25,8 @@
 
   To set up a built GiBUUTools:
 
-  - `source /path/to/build/$(uname)/setup.sh`
+  - `source build/Linux/setup.sh`
+    - `Linux` will change depending on your `CMAKE_SYSTEM_NAME`
 
   This will add GiBUUTools and GiBUU (if built) to the PATH.
 

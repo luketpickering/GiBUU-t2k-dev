@@ -4,14 +4,14 @@ Here should be the fastest way to make a GiBUU prediction.
 
 ## Build
 
-  - Make a build directory: `mkdir build`
-  - Configure the build: `cmake /path/to/source -DUSE_GiBUU=1`
+  - Make a build directory: `mkdir build && cd build`
+  - Configure the build: `cmake ../ -DUSE_GIBUU=1`
   - Build! `make`.
   - Install: `make install`.
 
 ## Source the environment:
 
-  - `source /path/to/build/$\(uname\)/setup.sh`
+  - `source build/Linux/setup.sh`
 
 ## Generate some events
 
