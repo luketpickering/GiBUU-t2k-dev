@@ -23,6 +23,11 @@
     `dox/GiBUUTools.pdf`
   - Install: `make install`.
 
+  - N.B. Your compiler *must* have c++11 support. If you are trying to build
+    with a non-system compiler, you must run cmake with
+    `-DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc)`
+    options manually specified, or cmake will use the system compiler.
+
   To set up a built GiBUUTools:
 
   - `source build/Linux/setup.sh`

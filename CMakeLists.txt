@@ -24,6 +24,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
     if (NOT (GCC_VERSION VERSION_GREATER 4.8 OR GCC_VERSION VERSION_EQUAL 4.8))
+        message(STATUS "[NOTE]: If you are trying to a use a non-system compiler, CMake is too clever for you. You must manually pass \'-DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc)\' when configuring (You should flatten this build directory and start again unless you know how to clear CMake cache variables).")
         message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.8 or greater (c++11 support).")
     endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
