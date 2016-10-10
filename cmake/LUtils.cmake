@@ -1,15 +1,11 @@
 include(ExternalProject)
 
-# find_file
-
 ExternalProject_Add(LUtils
-PREFIX "${PROJECT_SOURCE_DIR}/utils"
-UPDATE_COMMAND git pull
-DOWNLOAD_COMMAND git submodule update
-SOURCE_DIR "${PROJECT_SOURCE_DIR}/utils"
-BINARY_DIR "${PROJECT_BINARY_DIR}/LUtils"
-INSTALL_DIR "${CMAKE_INSTALL_PREFIX}"
+PREFIX "${PROJECT_BINARY_DIR}/LUtils"
+GIT_REPOSITORY http://git.ursaminorbeta.org.uk/luketpickering/lukes-utils.git
 CMAKE_ARGS
--DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
 -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
 -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
+
+set(LUTILS_INCLUDE_DIRS ${PROJECT_BINARY_DIR}/LUtils/src/LUtils-build/Linux/include)
+set(LUTILS_LIB ${PROJECT_BINARY_DIR}/LUtils/src/LUtils-build/Linux/lib/libLUtils.a)

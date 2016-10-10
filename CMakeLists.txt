@@ -28,9 +28,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DLINKEDPLUGINS")
 
 endif()
 
-message ("C++ Compiler      : " ${CXX_COMPILER_NAME})
-message ("    Release flags : " ${CMAKE_CXX_FLAGS_RELEASE})
-message ("    Debug flags   : " ${CMAKE_CXX_FLAGS_DEBUG})
+message(STATUS "C++ Compiler      : " ${CXX_COMPILER_NAME})
+message(STATUS "    Release flags : " ${CMAKE_CXX_FLAGS_RELEASE})
+message(STATUS "    Debug flags   : " ${CMAKE_CXX_FLAGS_DEBUG})
 
 
 ##################################  ROOT  ######################################
@@ -38,16 +38,17 @@ if ( NOT DEFINED ENV{ROOTSYS} )
   message (FATAL_ERROR "$ROOTSYS is not defined, please set up root first.")
 endif()
 
-include ($ENV{ROOTSYS}/etc/cmake/FindROOT.cmake)
-set(ROOTSYS $ENV{ROOTSYS})
+find_program (ROOTCONFIG root-config PATHS $ENV{ROOTSYS}/bin)
 
-if ( NOT ROOT_FOUND )
+if ( ROOTCONFIG-NOTFOUND )
   message (FATAL_ERROR "root-config could not be found, is ROOT built in $ROOTSYS = $ENV{ROOTSYS}")
 else()
+  message( STATUS "Found root-config: ${ROOTCONFIG}")
   execute_process (COMMAND root-config --cflags OUTPUT_VARIABLE ROOT_CXX_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
   execute_process (COMMAND root-config --libs OUTPUT_VARIABLE ROOT_LD_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
   message ( STATUS "root-config --cflags: " ${ROOT_CXX_FLAGS} )
   message ( STATUS "root-config --libs: " ${ROOT_LD_FLAGS} )
+  set(ROOTSYS $ENV{ROOTSYS})
 endif()
 
 ################################  LUtils  ######################################
@@ -58,14 +59,14 @@ add_executable(GiBUUToStdHep src/GiBUUToStdHep.cxx src/GiBUUToStdHep_Utils.cxx s
 target_include_directories(GiBUUToStdHep PUBLIC ${CMAKE_INSTALL_PREFIX}/include ${LUTILS_INCLUDE_DIRS} ./)
 set_target_properties(GiBUUToStdHep PROPERTIES COMPILE_FLAGS ${ROOT_CXX_FLAGS})
 add_dependencies(GiBUUToStdHep LUtils)
-target_link_libraries(GiBUUToStdHep ${CMAKE_INSTALL_PREFIX}/lib/libLUtils.a)
+target_link_libraries(GiBUUToStdHep ${LUTILS_LIB})
 set_target_properties(GiBUUToStdHep PROPERTIES LINK_FLAGS ${ROOT_LD_FLAGS})
 
 add_executable(GiBUUFluxTools src/GiBUUFluxTools.cxx)
 target_include_directories(GiBUUFluxTools PUBLIC ${CMAKE_INSTALL_PREFIX}/include ${LUTILS_INCLUDE_DIRS} ./)
 set_target_properties(GiBUUFluxTools PROPERTIES COMPILE_FLAGS ${ROOT_CXX_FLAGS})
 add_dependencies(GiBUUFluxTools LUtils)
-target_link_libraries(GiBUUFluxTools ${CMAKE_INSTALL_PREFIX}/lib/libLUtils.a)
+target_link_libraries(GiBUUFluxTools ${LUTILS_LIB})
 set_target_properties(GiBUUFluxTools PROPERTIES LINK_FLAGS ${ROOT_LD_FLAGS})
 
 include(${PROJECT_SOURCE_DIR}/cmake/GiBUU.cmake)
