@@ -349,6 +349,10 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
           UDBWarn("Parsed part: " << part << " from file " << fname
                                   << " to have a PDG of 0.");
         }
+        //A known unknown
+        if (giRooTracker->StdHepPdg[giRooTracker->StdHepN] == -1) {
+          giRooTracker->StdHepPdg[giRooTracker->StdHepN] = 0;
+        }
 
         giRooTracker->StdHepP4[giRooTracker->StdHepN]
                               [GiRooTracker::kStdHepIdxPx] = part.FourMom.X();
