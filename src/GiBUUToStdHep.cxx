@@ -278,8 +278,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     int FileNuType = GiBUUToStdHepOpts::nuTypes[fileNumber];
     int FileTargetA = GiBUUToStdHepOpts::TargetAs[fileNumber];
     int FileTargetZ = GiBUUToStdHepOpts::TargetZs[fileNumber];
-    double FileExtraWeight =
-        GiBUUToStdHepOpts::FileExtraWeights[fileNumber];
+    double FileExtraWeight = GiBUUToStdHepOpts::FileExtraWeights[fileNumber];
     double TotalEventReweight =
         NRunsScaleFactor * FileExtraWeight * GiBUUToStdHepOpts::OverallWeight;
 
@@ -347,7 +346,8 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
             GiBUUUtils::GiBUUToPDG(part.ID, part.Charge);
 
         if (!giRooTracker->StdHepPdg[giRooTracker->StdHepN]) {
-          UDBWarn("Parsed part: " << part << " to have a PDG of 0.");
+          UDBWarn("Parsed part: " << part << " from file " << fname
+                                  << " to have a PDG of 0.");
         }
 
         giRooTracker->StdHepP4[giRooTracker->StdHepN]
@@ -397,9 +397,9 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
             GiBUUToStdHepOpts::HaveProdChargeInfo
                 ? giRooTracker->GiBUUPrimaryParticleCharge
                 : -10);
-      } catch(...){
+      } catch (...) {
         UDBLog("Caught error in " << fname << ":" << ev.front().ln);
-        if(GiBUUToStdHepOpts::StrictMode){
+        if (GiBUUToStdHepOpts::StrictMode) {
           return 1;
         } else {
           continue;
@@ -407,28 +407,30 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       }
 
       if (UDBDebugging::GetInfoLevel() > 3) {
-        UDBVerbose("[INFO]: EvNo: "
-                << EvNum << ", contained " << giRooTracker->StdHepN << " ("
-                << ev.size() << ") particles. "
-                                "Event Weight: "
-                << std::setprecision(3) << giRooTracker->GiBUUPerWeight
-                << "\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
-                << ", NeutConventionReactionCode: "
-                << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
-                << TLorentzVector(
-                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
-                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
-                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
-                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE]));
+        UDBVerbose(
+            "[INFO]: EvNo: "
+            << EvNum << ", contained " << giRooTracker->StdHepN << " ("
+            << ev.size() << ") particles. "
+                            "Event Weight: "
+            << std::setprecision(3) << giRooTracker->GiBUUPerWeight
+            << "\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
+            << ", NeutConventionReactionCode: " << giRooTracker->GiBUU2NeutCode
+            << "\n\t[Lep In] : "
+            << TLorentzVector(
+                   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
+                   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
+                   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
+                   giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE]));
         UDBVerbose("\t[Target] : " << giRooTracker->StdHepPdg[1]);
         if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
-          UDBVerbose("\t[Nuc In] : "
-                  << TLorentzVector(
-                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
-                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
-                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
-                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
-                  << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")");
+          UDBVerbose(
+              "\t[Nuc In] : "
+              << TLorentzVector(
+                     giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
+                     giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
+                     giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
+                     giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
+              << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")");
         }
 
         // We have already printed the struck nucleon
@@ -451,15 +453,15 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
                     << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")");
 
           UDBVerbose("\t\t" << GiBUUUtils::WriteGiBUUHistory(
-                      giRooTracker->GiBHepHistory[stdHepInd]));
+                         giRooTracker->GiBHepHistory[stdHepInd]));
         }
         UDBVerbose("\t[Lep Out]: "
-                << TLorentzVector(
-                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
-                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
-                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
-                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
-                << std::endl);
+                   << TLorentzVector(
+                          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
+                          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
+                          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
+                          giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
+                   << std::endl);
       }
       OutputTree->Fill();
       NumEvs++;
@@ -605,9 +607,9 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
     while ((ent = readdir(dir)) != NULL) {
       if (matchExp.Index(TString(ent->d_name), &len) != Ssiz_t(-1)) {
         UDBLog("\t\t\tAdding matching file: "
-               << (dirpath + ent->d_name) << "(nu: " << NuType << ", A: "
-               << TargetA << ", Z: " << TargetZ << ", TW: " << FileExtraWeight
-               << ", IsCC: " << IsCC << ")");
+               << (dirpath + ent->d_name) << "(nu: " << NuType
+               << ", A: " << TargetA << ", Z: " << TargetZ
+               << ", TW: " << FileExtraWeight << ", IsCC: " << IsCC << ")");
         GiBUUToStdHepOpts::InpFNames.push_back((dirpath + ent->d_name));
         GiBUUToStdHepOpts::nuTypes.push_back(NuType);
         GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
@@ -624,8 +626,7 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
                                                       double(NFilesAdded));
     }
     UDBLog("Added " << NFilesAdded << " overall weight: "
-                    << (FileExtraWeight /
-                        double(NFilesAdded)));
+                    << (FileExtraWeight / double(NFilesAdded)));
   } else {
     /* could not open directory */
     perror("");
@@ -712,8 +713,8 @@ void SetOpts() {
           GiBUUToStdHepOpts::FileExtraWeights.pop_back();
         }
 
-        size_t NFilesAdded = AddFiles(opt, IsCC, NuType, TargetA, TargetZ,
-                                      FileExtraWeight);
+        size_t NFilesAdded =
+            AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
 
         return NFilesAdded;
       },
@@ -891,10 +892,12 @@ void SetOpts() {
                     UDBDebugging::SetInfoLevel(ival);
                     return true;
                   },
-                  false, [&]() {
+                  false,
+                  [&]() {
                     UDBDebugging::SetDebugLevel(2);
                     UDBDebugging::SetInfoLevel(2);
-                  }, "<0-4>{default==0}");
+                  },
+                  "<0-4>{default==0}");
 
   CLIArgs::AddOpt("-NI", "--No-Initial-State", false,
                   [&](std::string const &opt) -> bool {

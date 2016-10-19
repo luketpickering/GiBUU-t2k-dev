@@ -45,8 +45,14 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 7: {
       return (GiBUUCharge > 0) ? 102214 : 102114;
     }
+    case 8: {
+      return (GiBUUCharge > 0) ? 112214 : 112114;
+    }
     case 10: {
       return (GiBUUCharge > 0) ? 102216 : 102116;
+    }
+    case 14: {
+      return (GiBUUCharge > 0) ? 212214 : 212114;
     }
     case 15: {
       return 0;
@@ -73,9 +79,6 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
           return 112112;
         }
       }
-    }
-    case 20: {
-      return 0;
     }
     case 21: {
       switch (GiBUUCharge) {
@@ -137,6 +140,46 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
         }
       }
     }
+    case 28: {
+      switch (GiBUUCharge) {
+        case 2: {
+          return 222224;
+        }
+        case 1: {
+          return 222214;
+        }
+        case 0: {
+          return 222114;
+        }
+        case -1: {
+          return 221114;
+        }
+        default: {
+          UDBWarn("P33(1920) resonance had an odd charge: " << GiBUUCharge);
+          return 222114;
+        }
+      }
+    }
+    case 31: {
+      switch (GiBUUCharge) {
+        case 2: {
+          return 202228;
+        }
+        case 1: {
+          return 202218;
+        }
+        case 0: {
+          return 202118;
+        }
+        case -1: {
+          return 201118;
+        }
+        default: {
+          UDBWarn("F37(1950) resonance had an odd charge: " << GiBUUCharge);
+          return 202118;
+        }
+      }
+    }
     case 32: {
       return 3122;
     }
@@ -145,6 +188,12 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
         return (GiBUUCharge > 0) ? 3222 : 3112;
       }
       return 3212;
+    }
+    case 34: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 3224 : 3114;
+      }
+      return 3214;
     }
     case 53: {
       return (GiBUUCharge > 0) ? 3322 : 3312;
@@ -164,6 +213,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       }
       return 111;
     }
+    case 102: { return 221; }
     case 103: {
       if (GiBUUCharge) {
         return (GiBUUCharge > 0) ? 213 : -213;
@@ -209,6 +259,13 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 999: {
       return 22;
     }
+    case 6: //S11(2090)
+    case 20: //S31(1900)
+    case 23: //D35(1930)
+    { // No PDG for these particles
+      return -1;
+    }
+
     default: {
       if (GiBUUCode) {
         UDBWarn("Missed a GiBUU PDG Code: " << GiBUUCode);
@@ -253,6 +310,11 @@ int PDGToGiBUU(int PDG) {
       return 7;
     }
 
+    case 112214:
+    case 112114: {
+      return 8;
+    }
+
     case 102216:
     case 102116: {
       return 10;
@@ -291,6 +353,21 @@ int PDGToGiBUU(int PDG) {
       return 27;
     }
 
+    case 222224:
+    case 222214:
+    case 222114:
+    case 221114: {
+      return 27;
+    }
+
+    case 202228:
+    case 202218:
+    case 202118:
+    case 201118: {
+      return 31;
+    }
+
+
     case 3122: {
       return 32;
     }
@@ -301,11 +378,20 @@ int PDGToGiBUU(int PDG) {
       return 33;
     }
 
+    case 3224:
+    case 3114:
+    case 3214: {
+      return 34;
+    }
+
+
     case 211:
     case -211:
     case 111: {
       return 101;
     }
+
+    case 221: { return 102; }
 
     case 213:
     case -213:
