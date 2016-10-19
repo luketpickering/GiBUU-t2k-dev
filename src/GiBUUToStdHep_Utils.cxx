@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <exception>
 #include <iomanip>
 
 #include "LUtils/Debugging.hxx"
@@ -312,11 +313,12 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 9:   // D13(2080)
     case 11:  // G17(2190)
     case 13:  // P11(2100)
+    case 17:  // F15(2000)
     case 18:  // F17(1990)
     case 20:  // S31(1900)
     case 22:  // D33(1940)
     case 23:  // D35(1930)
-    case 24: // D35(2350)
+    case 24:  // D35(2350)
     case 25:  // P31(1750
     case 29:  // F35(1750)
     {         // No PDG for these particles
@@ -451,7 +453,9 @@ int PDGToGiBUU(int PDG) {
       return 34;
     }
 
-    case 102134 : { return 36; }
+    case 102134: {
+      return 36;
+    }
 
     case 211:
     case -211:
@@ -915,7 +919,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
               UDBError("Unexpected delta state: CC "
                        << IsCC << ", neutrino " << IsNu
                        << ", with delta charge: " << PrimaryProdCharge);
-              throw;
+              throw std::invalid_argument("Unexpected delta state");
             }
           }
         } else {
@@ -928,7 +932,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
               UDBError("Unexpected delta state: CC "
                        << IsCC << ", neutrino " << IsNu
                        << ", with delta charge: " << PrimaryProdCharge);
-              throw;
+              throw std::invalid_argument("Unexpected delta state");
             }
           }
         }
@@ -943,7 +947,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
               UDBError("Unexpected delta state: CC "
                        << IsCC << ", neutrino " << IsNu
                        << ", with delta charge: " << PrimaryProdCharge);
-              throw;
+              throw std::invalid_argument("Unexpected delta state");
             }
           }
         } else {
@@ -956,7 +960,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
               UDBError("Unexpected delta state: CC "
                        << IsCC << ", neutrino " << IsNu
                        << ", with delta charge: " << PrimaryProdCharge);
-              throw;
+              throw std::invalid_argument("Unexpected delta state");
             }
           }
         }
