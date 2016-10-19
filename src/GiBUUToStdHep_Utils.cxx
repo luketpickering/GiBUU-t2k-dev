@@ -51,6 +51,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 10: {
       return (GiBUUCharge > 0) ? 102216 : 102116;
     }
+    case 12: {
+      return (GiBUUCharge > 0) ? 212212 : 212112;
+    }
     case 14: {
       return (GiBUUCharge > 0) ? 212214 : 212114;
     }
@@ -160,7 +163,27 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
         }
       }
     }
-    case 31: {
+    case 30: {
+      switch (GiBUUCharge) {
+        case 2: {
+          return 212226;
+        }
+        case 1: {
+          return 212216;
+        }
+        case 0: {
+          return 212116;
+        }
+        case -1: {
+          return 211116;
+        }
+        default: {
+          UDBWarn("F35(1905) resonance had an odd charge: " << GiBUUCharge);
+          return 212116;
+        }
+      }
+    }
+        case 31: {
       switch (GiBUUCharge) {
         case 2: {
           return 202228;
@@ -213,7 +236,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       }
       return 111;
     }
-    case 102: { return 221; }
+    case 102: {
+      return 221;
+    }
     case 103: {
       if (GiBUUCharge) {
         return (GiBUUCharge > 0) ? 213 : -213;
@@ -231,6 +256,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     }
     case 111: {
       return (GiBUUCharge) ? -321 : -311;
+    }
+    case 112: {
+      return (GiBUUCharge) ? 323 : 313;
     }
     case 114: {
       return (GiBUUCharge) ? 411 : 421;
@@ -259,10 +287,12 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 999: {
       return 22;
     }
-    case 6: //S11(2090)
-    case 20: //S31(1900)
-    case 23: //D35(1930)
-    { // No PDG for these particles
+    case 6:   // S11(2090)
+    case 20:  // S31(1900)
+    case 22:  // D33(1940)
+    case 23:  // D35(1930)
+    case 25:
+    {         // No PDG for these particles
       return -1;
     }
 
@@ -320,6 +350,11 @@ int PDGToGiBUU(int PDG) {
       return 10;
     }
 
+    case 212212:
+    case 212112: {
+      return 12;
+    }
+
     case 202216:
     case 202116: {
       return 16;
@@ -357,16 +392,21 @@ int PDGToGiBUU(int PDG) {
     case 222214:
     case 222114:
     case 221114: {
-      return 27;
+      return 28;
     }
 
+    case 212226:
+    case 212216:
+    case 212116:
+    case 211116: {
+      return 30;
+    }
     case 202228:
     case 202218:
     case 202118:
     case 201118: {
       return 31;
     }
-
 
     case 3122: {
       return 32;
@@ -384,14 +424,15 @@ int PDGToGiBUU(int PDG) {
       return 34;
     }
 
-
     case 211:
     case -211:
     case 111: {
       return 101;
     }
 
-    case 221: { return 102; }
+    case 221: {
+      return 102;
+    }
 
     case 213:
     case -213:
@@ -415,6 +456,11 @@ int PDGToGiBUU(int PDG) {
     case -321:
     case -311: {
       return 111;
+    }
+
+    case 323:
+    case 313: {
+      return 112;
     }
 
     case 11:
@@ -694,10 +740,10 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
     if (rMode) {
       if (Warn) {  // If theres something fishy then shout about it
         UDBWarn("Returning potentially dodgey (mode:0) "
-                  << "NEUT Code: " << rMode << " (Found Nucleon: " << NucleonPDG
-                  << ").");
+                << "NEUT Code: " << rMode << " (Found Nucleon: " << NucleonPDG
+                << ").");
         UDBWarn("        It came from the event: " << PrintGiBUUStdHepArray(
-                      2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
+                    2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
       }
       return rMode;
     }
@@ -708,8 +754,8 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
   for (auto const &decayPi : FSDP) {  // Try first to make sure it is from
     if (std::get<2>(decayPi) != 2) {  // a Delta
       UDBWarn("Had a GiBUU mode 2 which resulted in decay "
-                << "pions. Their decay parent, " << std::get<2>(decayPi)
-                << ", was not a Delta though.");
+              << "pions. Their decay parent, " << std::get<2>(decayPi)
+              << ", was not a Delta though.");
       if (std::get<2>(decayPi) == 102 || std::get<2>(decayPi) == 104) {
         return 21;
       }
@@ -733,11 +779,10 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
     if (rMode) {
       if (Warn) {  // If theres something fishy then shout about it
         UDBWarn("Returning potentially dodgey (mode:1) "
-                  << "NEUT Code: " << rMode
-                  << " (Found Same generation Nucleon: " << SameGenNucleon
-                  << ").");
+                << "NEUT Code: " << rMode << " (Found Same generation Nucleon: "
+                << SameGenNucleon << ").");
         UDBWarn("        It came from the event: " << PrintGiBUUStdHepArray(
-                      2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
+                    2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
       }
       return rMode;
     }
@@ -763,11 +808,10 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
         PionPDGToNeutResMode(std::get<1>(decayPi), SameGenNucleon, Warn);
     if (rMode) {
       UDBWarn("Returning potentially dodgey (mode:2) "
-                << "NEUT Code: " << rMode
-                << " (Found Nucleon probably from same "
-                << "decay: " << SameGenNucleon << ").");
+              << "NEUT Code: " << rMode << " (Found Nucleon probably from same "
+              << "decay: " << SameGenNucleon << ").");
       UDBWarn("        It came from the event: " << PrintGiBUUStdHepArray(
-                    2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
+                  2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
       return rMode;
     }
   }
@@ -780,10 +824,10 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
   }
 
   UDBWarn("Giving up on this Delta resonance, returning: "
-            << ((NucleonPDG == 2212) ? 10 : 9)
-            << " (Found Nucleon: " << NucleonPDG << ")."
-            << PrintGiBUUStdHepArray(2, StdHepPDGArray, HistoryArray,
-                                     StdHepN, "\t+"));
+          << ((NucleonPDG == 2212) ? 10 : 9)
+          << " (Found Nucleon: " << NucleonPDG << ")."
+          << PrintGiBUUStdHepArray(2, StdHepPDGArray, HistoryArray, StdHepN,
+                                   "\t+"));
   return (NucleonPDG == 2212) ? 11 : 12;
 }
 
