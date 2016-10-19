@@ -183,7 +183,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
         }
       }
     }
-        case 31: {
+    case 31: {
       switch (GiBUUCharge) {
         case 2: {
           return 202228;
@@ -218,6 +218,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       }
       return 3214;
     }
+    case 36: {
+      return 102134;
+    }
     case 53: {
       return (GiBUUCharge > 0) ? 3322 : 3312;
     }
@@ -251,6 +254,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 105: {
       return 223;
     }
+    case 106: {
+      return 331;
+    }
     case 110: {
       return (GiBUUCharge) ? 321 : 311;
     }
@@ -259,6 +265,9 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     }
     case 112: {
       return (GiBUUCharge) ? 323 : 313;
+    }
+    case 113: {
+      return (GiBUUCharge) ? -323 : -313;
     }
     case 114: {
       return (GiBUUCharge) ? 411 : 421;
@@ -284,14 +293,32 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 912: {
       return 14;
     }
+    case 913: {
+      return 16;
+    }
+    case -911: {
+      return -12;
+    }
+    case -912: {
+      return -14;
+    }
+    case -913: {
+      return -16;
+    }
     case 999: {
       return 22;
     }
     case 6:   // S11(2090)
+    case 9:   // D13(2080)
+    case 11:  // G17(2190)
+    case 13:  // P11(2100)
+    case 18:  // F17(1990)
     case 20:  // S31(1900)
     case 22:  // D33(1940)
     case 23:  // D35(1930)
-    case 25:
+    case 24: // D35(2350)
+    case 25:  // P31(1750
+    case 29:  // F35(1750)
     {         // No PDG for these particles
       return -1;
     }
@@ -424,6 +451,8 @@ int PDGToGiBUU(int PDG) {
       return 34;
     }
 
+    case 102134 : { return 36; }
+
     case 211:
     case -211:
     case 111: {
@@ -446,6 +475,10 @@ int PDGToGiBUU(int PDG) {
 
     case 223: {
       return 105;
+    }
+
+    case 331: {
+      return 106;
     }
 
     case 321:
@@ -473,14 +506,28 @@ int PDGToGiBUU(int PDG) {
       return 902;
     }
 
-    case 12:
-    case -12: {
+    case 12: {
       return 911;
     }
 
-    case 14:
-    case -14: {
+    case 14: {
       return 912;
+    }
+
+    case 16: {
+      return 913;
+    }
+
+    case -12: {
+      return -911;
+    }
+
+    case -14: {
+      return -912;
+    }
+
+    case -16: {
+      return -913;
     }
 
     case 22: {
