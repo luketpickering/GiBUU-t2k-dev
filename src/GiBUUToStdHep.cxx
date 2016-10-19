@@ -111,6 +111,9 @@ float OverallWeight = 1;
 bool HaveProdChargeInfo = false;
 
 std::vector<std::pair<std::string, std::string> > FluxFilesToAdd;
+
+///\brief Whether to exit on suspicious input file contents.
+bool StrictMode = true;
 }
 
 struct GiBUUPartBlob {
@@ -125,7 +128,8 @@ struct GiBUUPartBlob {
         History(0),
         Prodid(0),
         Enu(0),
-        ProdCharge(0) {}
+        ProdCharge(0),
+        ln(0) {}
   Int_t Run;
   Int_t EvNum;
   Int_t ID;
@@ -137,6 +141,7 @@ struct GiBUUPartBlob {
   Int_t Prodid;
   Double_t Enu;
   Int_t ProdCharge;
+  Int_t ln;
 };
 
 namespace {
@@ -149,6 +154,7 @@ std::ostream &operator<<(std::ostream &os, GiBUUPartBlob const &part) {
   if (GiBUUToStdHepOpts::HaveProdChargeInfo) {
     os << ", ProdCharge: " << part.ProdCharge;
   }
+  os << ", LineNumber: " << part.ln;
   return os << " }";
 }
 }
@@ -194,7 +200,7 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
       pblob.ProdCharge = std::stoi(splitLine[15]);
     }
   } catch (const std::invalid_argument &ia) {
-    UDBWarn("Failed to parse one of the values: \"" << line << "\"");
+    UDBError("Failed to parse one of the values: \"" << line << "\"");
     throw;
   }
 
@@ -252,6 +258,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
         CurrEv.clear();
       }
       CurrEv.push_back(part);
+      CurrEv.back().ln = LineNum;
       LastEvNum = part.EvNum;
       LineNum++;
     }
@@ -382,13 +389,22 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       }  // If we broke then don't bother continuing
          // processing.
 
-      giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
-          giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
-          giRooTracker->GiBHepHistory, giRooTracker->StdHepN, FileIsCC,
-          (GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : -1,
-          GiBUUToStdHepOpts::HaveProdChargeInfo
-              ? giRooTracker->GiBUUPrimaryParticleCharge
-              : -10);
+      try {
+        giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
+            giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
+            giRooTracker->GiBHepHistory, giRooTracker->StdHepN, FileIsCC,
+            (GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : -1,
+            GiBUUToStdHepOpts::HaveProdChargeInfo
+                ? giRooTracker->GiBUUPrimaryParticleCharge
+                : -10);
+      } catch(...){
+        UDBLog("Caught error in " << fname << ":" << ev.front().ln);
+        if(GiBUUToStdHepOpts::StrictMode){
+          return 1;
+        } else {
+          continue;
+        }
+      }
 
       if (UDBDebugging::GetInfoLevel() > 3) {
         UDBVerbose("[INFO]: EvNo: "
@@ -875,7 +891,10 @@ void SetOpts() {
                     UDBDebugging::SetInfoLevel(ival);
                     return true;
                   },
-                  false, [&]() {}, "<0-4>{default==0}");
+                  false, [&]() {
+                    UDBDebugging::SetDebugLevel(2);
+                    UDBDebugging::SetInfoLevel(2);
+                  }, "<0-4>{default==0}");
 
   CLIArgs::AddOpt("-NI", "--No-Initial-State", false,
                   [&](std::string const &opt) -> bool {

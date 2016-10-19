@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <iomanip>
 
+#include "LUtils/Debugging.hxx"
+
 #include "GiBUUToStdHep_Utils.hxx"
 
 namespace GiBUUUtils {
@@ -26,8 +28,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
           return 1114;
         }
         default: {
-          std::cout << "[WARN]: Delta resonance had an odd charge: "
-                    << GiBUUCharge << std::endl;
+          UDBWarn("Delta resonance had an odd charge: " << GiBUUCharge);
           return 2114;
         }
       }
@@ -68,8 +69,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
           return 111112;
         }
         default: {
-          std::cout << "[WARN]: S31(1620) resonance had an odd charge: "
-                    << GiBUUCharge << std::endl;
+          UDBWarn("S31(1620) resonance had an odd charge: " << GiBUUCharge);
           return 112112;
         }
       }
@@ -92,8 +92,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
           return 121114;
         }
         default: {
-          std::cout << "[WARN]: D33(1700) resonance had an odd charge: "
-                    << GiBUUCharge << std::endl;
+          UDBWarn("D33(1700) resonance had an odd charge: " << GiBUUCharge);
           return 122114;
         }
       }
@@ -113,8 +112,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
           return 221112;
         }
         default: {
-          std::cout << "[WARN]: P31(1910) resonance had an odd charge: "
-                    << GiBUUCharge << std::endl;
+          UDBWarn("P31(1910) resonance had an odd charge: " << GiBUUCharge);
           return 222112;
         }
       }
@@ -134,8 +132,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
           return 201114;
         }
         default: {
-          std::cout << "[WARN]: P33(1600) resonance had an odd charge: "
-                    << GiBUUCharge << std::endl;
+          UDBWarn("P33(1600) resonance had an odd charge: " << GiBUUCharge);
           return 202114;
         }
       }
@@ -214,8 +211,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     }
     default: {
       if (GiBUUCode) {
-        // std::cout << "[WARN]: Missed a GiBUU PDG Code: " << GiBUUCode
-        // << std::endl;
+        UDBWarn("Missed a GiBUU PDG Code: " << GiBUUCode);
       }
       return 0;
     }
@@ -361,7 +357,7 @@ int PDGToGiBUU(int PDG) {
 
     default: {
       if (PDG) {
-        std::cout << "[WARN]: Missed a PDG Code: " << PDG << std::endl;
+        UDBWarn("Missed a PDG Code: " << PDG);
       }
       return 0;
     }
@@ -430,14 +426,18 @@ std::string WriteGiBUUHistory(Long_t HistCode) {
   return ss.str();
 }
 
-void PrintGiBUUStdHepArray(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
-                           Long_t const *const HistoryArray, Int_t StdHepN,
-                           std::string const &indent = "") {
-  std::cout << indent << "GiBUUCode: " << GiBUUCode << std::endl;
+std::string PrintGiBUUStdHepArray(Int_t GiBUUCode,
+                                  Int_t const *const StdHepPDGArray,
+                                  Long_t const *const HistoryArray,
+                                  Int_t StdHepN,
+                                  std::string const &indent = "") {
+  std::stringstream ss("");
+  ss << indent << "GiBUUCode: " << GiBUUCode << std::endl;
   for (Int_t i = 0; i < StdHepN; ++i) {
-    std::cout << indent << "\t(" << std::setw(4) << StdHepPDGArray[i]
-              << "): " << WriteGiBUUHistory(HistoryArray[i]) << std::endl;
+    ss << indent << "\t(" << std::setw(4) << StdHepPDGArray[i]
+       << "): " << WriteGiBUUHistory(HistoryArray[i]) << std::endl;
   }
+  return ss.str();
 }
 
 // Returns vect of: Particle PDG, Parent1, Parent2
@@ -607,12 +607,11 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
     Int_t rMode = PionPDGToNeutResMode(std::get<0>(part), NucleonPDG, Warn);
     if (rMode) {
       if (Warn) {  // If theres something fishy then shout about it
-        // std::cout << "[WARN]: Returning potentially dodgey (mode:0) "
-        //   << "NEUT Code: " << rMode << " (Found Nucleon: "
-        //   << NucleonPDG << ")." << std::endl;
-        // std::cout << "        It came from the event: " << std::endl;
-        // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-        //   StdHepN,"\t|");
+        UDBWarn("Returning potentially dodgey (mode:0) "
+                  << "NEUT Code: " << rMode << " (Found Nucleon: " << NucleonPDG
+                  << ").");
+        UDBWarn("        It came from the event: " << PrintGiBUUStdHepArray(
+                      2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
       }
       return rMode;
     }
@@ -622,10 +621,9 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
   auto const &FSDP = GetFSDecayPions(StdHepPDGArray, HistoryArray, StdHepN);
   for (auto const &decayPi : FSDP) {  // Try first to make sure it is from
     if (std::get<2>(decayPi) != 2) {  // a Delta
-      // std::cout << "[WARN]: Had a GiBUU mode 2 which resulted in decay "
-      //   << "pions. Their decay parent, " << std::get<2>(decayPi)
-      //   << ", was not a Delta though."
-      //   << std::endl;
+      UDBWarn("Had a GiBUU mode 2 which resulted in decay "
+                << "pions. Their decay parent, " << std::get<2>(decayPi)
+                << ", was not a Delta though.");
       if (std::get<2>(decayPi) == 102 || std::get<2>(decayPi) == 104) {
         return 21;
       }
@@ -648,12 +646,12 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
         PionPDGToNeutResMode(std::get<1>(decayPi), SameGenNucleon, Warn);
     if (rMode) {
       if (Warn) {  // If theres something fishy then shout about it
-        // std::cout << "[WARN]: Returning potentially dodgey (mode:1) "
-        //   << "NEUT Code: " << rMode << " (Found Same generation Nucleon: "
-        //   << SameGenNucleon << ")." << std::endl;
-        // std::cout << "        It came from the event: " << std::endl;
-        // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-        //   StdHepN,"\t|");
+        UDBWarn("Returning potentially dodgey (mode:1) "
+                  << "NEUT Code: " << rMode
+                  << " (Found Same generation Nucleon: " << SameGenNucleon
+                  << ").");
+        UDBWarn("        It came from the event: " << PrintGiBUUStdHepArray(
+                      2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
       }
       return rMode;
     }
@@ -678,12 +676,12 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
     Int_t rMode =
         PionPDGToNeutResMode(std::get<1>(decayPi), SameGenNucleon, Warn);
     if (rMode) {
-      // std::cout << "[WARN]: Returning potentially dodgey (mode:2) "
-      //   << "NEUT Code: " << rMode << " (Found Nucleon probably from same "
-      //   << "decay: " << SameGenNucleon << ")." << std::endl;
-      // std::cout << "        It came from the event: " << std::endl;
-      // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-      //   StdHepN,"\t|");
+      UDBWarn("Returning potentially dodgey (mode:2) "
+                << "NEUT Code: " << rMode
+                << " (Found Nucleon probably from same "
+                << "decay: " << SameGenNucleon << ").");
+      UDBWarn("        It came from the event: " << PrintGiBUUStdHepArray(
+                    2, StdHepPDGArray, HistoryArray, StdHepN, "\t|"));
       return rMode;
     }
   }
@@ -695,12 +693,12 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
     NucleonPDG = gxparts.size() ? std::get<1>(gxparts.front()) : 0;
   }
 
-  // std::cout << "\nGiving up on this Delta resonance, returning: "
-  //   << ((NucleonPDG==2212)?10:9) << " (Found Nucleon: "
-  //   << NucleonPDG << ")." << std::endl;
-  // PrintGiBUUStdHepArray(GiBUUCode,StdHepPDGArray,HistoryArray,
-  //       StdHepN,"\t+");
-  return (NucleonPDG == 2212) ? 10 : 9;
+  UDBWarn("Giving up on this Delta resonance, returning: "
+            << ((NucleonPDG == 2212) ? 10 : 9)
+            << " (Found Nucleon: " << NucleonPDG << ")."
+            << PrintGiBUUStdHepArray(2, StdHepPDGArray, HistoryArray,
+                                     StdHepN, "\t+"));
+  return (NucleonPDG == 2212) ? 11 : 12;
 }
 
 int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
@@ -737,10 +735,9 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
             case 1:
               return 12;
             default: {
-              std::cerr << "[ERROR]: Unexpected delta state: CC " << IsCC
-                        << ", neutrino " << IsNu
-                        << ", with delta charge: " << PrimaryProdCharge
-                        << std::endl;
+              UDBError("Unexpected delta state: CC "
+                       << IsCC << ", neutrino " << IsNu
+                       << ", with delta charge: " << PrimaryProdCharge);
               throw;
             }
           }
@@ -751,10 +748,9 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
             case -1:
               return -11;
             default: {
-              std::cerr << "[ERROR]: Unexpected delta state: CC " << IsCC
-                        << ", neutrino " << IsNu
-                        << ", with delta charge: " << PrimaryProdCharge
-                        << std::endl;
+              UDBError("Unexpected delta state: CC "
+                       << IsCC << ", neutrino " << IsNu
+                       << ", with delta charge: " << PrimaryProdCharge);
               throw;
             }
           }
@@ -767,10 +763,9 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
             case 1:
               return 32;
             default: {
-              std::cerr << "[ERROR]: Unexpected delta state: CC " << IsCC
-                        << ", neutrino " << IsNu
-                        << ", with delta charge: " << PrimaryProdCharge
-                        << std::endl;
+              UDBError("Unexpected delta state: CC "
+                       << IsCC << ", neutrino " << IsNu
+                       << ", with delta charge: " << PrimaryProdCharge);
               throw;
             }
           }
@@ -781,10 +776,9 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
             case 1:
               return -32;
             default: {
-              std::cerr << "[ERROR]: Unexpected delta state: CC " << IsCC
-                        << ", neutrino " << IsNu
-                        << ", with delta charge: " << PrimaryProdCharge
-                        << std::endl;
+              UDBError("Unexpected delta state: CC "
+                       << IsCC << ", neutrino " << IsNu
+                       << ", with delta charge: " << PrimaryProdCharge);
               throw;
             }
           }
@@ -841,10 +835,11 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     default: {}
   }
 
-  std::cout << "[WARN]: Couldn't determine NEUT equivalent reaction code "
-               "for the interaction:"
-            << std::endl;
-  PrintGiBUUStdHepArray(GiBUUCode, StdHepPDGArray, HistoryArray, StdHepN);
+  UDBWarn(
+      "Couldn't determine NEUT equivalent reaction code "
+      "for the interaction:"
+      << PrintGiBUUStdHepArray(GiBUUCode, StdHepPDGArray, HistoryArray,
+                               StdHepN));
   return 0;
 }
 }
