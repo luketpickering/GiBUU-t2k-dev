@@ -42,17 +42,17 @@ while [[ ${#} -gt 0 ]]; do
       FLUX_IS_ANTI="1"
       ;;
 
-      # -W|--wrong-sign-flux-file)
+      -w|--wrong-sign-flux-file)
 
-      # if [[ ${#} -lt 2 ]]; then
-      #   echo "[ERROR]: ${1} expected a value."
-      #   exit 1
-      # fi
+      if [[ ${#} -lt 2 ]]; then
+        echo "[ERROR]: ${1} expected a value."
+        exit 1
+      fi
 
-      # WSB_FLUX_FILE="$2"
-      # echo "[OPT]: Reading wrong sign flux from ${WSB_FLUX_FILE}"
-      # shift # past argument
-      # ;;
+      WSB_FLUX_FILE="$2"
+      echo "[OPT]: Reading wrong sign flux from ${WSB_FLUX_FILE}"
+      shift # past argument
+      ;;
 
       -n|--num-cc-jobs)
 
@@ -141,6 +141,7 @@ while [[ ${#} -gt 0 ]]; do
       echo "[RUNLIKE] ${SCRIPTNAME}"
       echo "         -?|--help <type=default_value>: Display this help message"
       echo "         -F|--flux-file  </path/to/input/flux>:"
+      echo "         -w|--wrong-sign-flux-file  </path/to/input/wrong_sign_flux>:"
       echo "         -A|--flux-is-anti-nu : Main flux component is anti-numu (NP/RHC/NF)"
       echo "         -n|--num-cc-jobs <int=1> : The number of CC main flux component jobs to run"
       echo "         -a|--target-a <int=12> : Needs to be known for correct stdhep event output"
