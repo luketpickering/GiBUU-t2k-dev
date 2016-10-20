@@ -1,5 +1,5 @@
-if (DEFINED USE_GIBUU AND USE_GIBUU)
-    set(USE_GIBUU 1)
+if (DEFINED USE_GiBUU AND USE_GiBUU)
+    set(USE_GiBUU 1)
   include(ExternalProject)
 
   SET(GIBUUVER 6910)
@@ -55,6 +55,15 @@ install(FILES ${COMPDATA} DESTINATION compdata)
 FILE(GLOB CINT_MACROS ${PROJECT_SOURCE_DIR}/cint_macros/*.C)
 install(FILES ${CINT_MACROS} DESTINATION cint_macros)
 
+FILE(GLOB BATCHJOBS_CARDS ${PROJECT_SOURCE_DIR}/batchjobs/*.in)
+install(FILES ${BATCHJOBS_CARDS} DESTINATION batchjobs)
+
+FILE(GLOB BATCHJOBS_FLUX ${PROJECT_SOURCE_DIR}/batchjobs/fluxes/*.*)
+install(FILES ${BATCHJOBS_FLUX} DESTINATION batchjobs/fluxes)
+
+FILE(GLOB BATCHJOBS_SCRIPTS ${PROJECT_SOURCE_DIR}/batchjobs/*.sh)
+install(PROGRAMS ${BATCHJOBS_SCRIPTS} DESTINATION batchjobs)
+
 else()
-    set(USE_GIBUU 0)
+    set(USE_GiBUU 0)
 endif()
