@@ -176,6 +176,12 @@ if [[ ! -e ${FLUX_FILE} ]]; then
   exit 1
 fi
 
+NLinesFlux=$(cat ${FLUX_FILE} | wc -l)
+if [[ ${NLinesFlux} -gt 210 ]]; then
+  echo "[ERROR]: The input flux file: ${FLUX_FILE} has too many lines (${NLinesFlux}), GiBUU can read files with a maximum of 210 lines. Please shorten it."
+  exit 1
+fi
+
 if [[ ! -e ${GIBUUTOOLSROOT}/setup.sh ]]; then
   echo "[ERROR]: Expected to find a GiBUU environment set up script at \"\$GIBUUTOOLSROOT/setup.sh\". Is this sourced?"
   exit 1
@@ -190,6 +196,12 @@ fi
 if [[ "${WSB_FLUX_FILE}" ]] && [[ ! -e "${WSB_FLUX_FILE}" ]]; then
   echo "[ERROR]: Wrong sign flux file: \"${WSB_FLUX_FILE}\" could not be found."
   exit 1
+else
+  NLinesFluxWSB=$(cat ${WSB_FLUX_FILE} | wc -l)
+  if [[ ${NLinesFlux} -gt 210 ]]; then
+    echo "[ERROR]: The input flux file: ${WSB_FLUX_FILE} has too many lines (${NLinesFluxWSB}), GiBUU can read files with a maximum of 210 lines. Please shorten it."
+    exit 1
+  fi
 fi
 
 if [[ ! -e "${INPUT_JOBCARD}" ]]; then
