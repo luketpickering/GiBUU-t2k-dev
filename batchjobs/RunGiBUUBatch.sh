@@ -9,7 +9,15 @@ source ${GIBUUTOOLSROOT}/setup.sh
 which GiBUU.x
 
 CARDFILEINP=$(readlink -f ./job.card)
-FLUX=$(readlink -f ./flux.txt)
+if [[ -e "flux.txt" ]]; then
+  FLUX=$(readlink -f ./flux.txt)
+elif [[ -e "wsb_flux.txt" ]]; then
+  FLUX=$(readlink -f ./wsb_flux.txt)
+else
+  echo "[ERROR]: Couldn't find flux.txt or wsb_flux.txt"
+  exit 1
+fi
+
 OUTPUTDIR=$(readlink -f .)
 
 touch job.${SGE_TASK_ID}.running
