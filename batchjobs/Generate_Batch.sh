@@ -16,7 +16,7 @@ DENSITY_SWITCH="2"
 USE_OSET_INMED_BROAD=".true."
 N_RUNS="10"
 N_ENSEMBLES="4000"
-N_H_ENSEMBLES=$(python -c "print ${N_ENSEMBLES}*2;")
+N_H_ENSEMBLES=$(python -c "print ${N_ENSEMBLES};")
 
 SCRIPTNAME="${0}"
 
@@ -764,6 +764,7 @@ fi
 
 
 echo "-R i${TOTAL_RESCALE}" >> stdhep.conv.opts
+echo "-o ${JOB_NAME}_GiBUU.stdhep.root" >> stdhep.conv.opts
 
 qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
 

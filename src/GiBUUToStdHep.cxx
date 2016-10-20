@@ -349,7 +349,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
           UDBWarn("Parsed part: " << part << " from file " << fname
                                   << " to have a PDG of 0.");
         }
-        //A known unknown
+        // A known unknown
         if (giRooTracker->StdHepPdg[giRooTracker->StdHepN] == -1) {
           giRooTracker->StdHepPdg[giRooTracker->StdHepN] = 0;
         }
@@ -629,8 +629,12 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
       GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0 /
                                                       double(NFilesAdded));
     }
-    UDBLog("Added " << NFilesAdded << " overall weight: "
-                    << (FileExtraWeight / double(NFilesAdded)));
+    if (NFilesAdded) {
+      UDBLog("Added " << NFilesAdded << " overall weight: "
+                      << (FileExtraWeight / double(NFilesAdded)));
+    } else {
+      UDBLog("Failed to find any matching files.");
+    }
   } else {
     /* could not open directory */
     perror("");
@@ -717,10 +721,7 @@ void SetOpts() {
           GiBUUToStdHepOpts::FileExtraWeights.pop_back();
         }
 
-        size_t NFilesAdded =
-            AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
-
-        return NFilesAdded;
+        return AddFiles(opt, IsCC, NuType, TargetA, TargetZ, FileExtraWeight);
       },
       true, []() {}, "<File Name>");
 
@@ -896,12 +897,7 @@ void SetOpts() {
                     UDBDebugging::SetInfoLevel(ival);
                     return true;
                   },
-                  false,
-                  [&]() {
-                    UDBDebugging::SetDebugLevel(2);
-                    UDBDebugging::SetInfoLevel(2);
-                  },
-                  "<0-4>{default==0}");
+                  false, [&]() {}, "<0-4>{default==0}");
 
   CLIArgs::AddOpt("-NI", "--No-Initial-State", false,
                   [&](std::string const &opt) -> bool {
@@ -948,6 +944,9 @@ void SetOpts() {
 }
 
 int main(int argc, char const *argv[]) {
+  UDBDebugging::SetDebugLevel(2);
+  UDBDebugging::SetInfoLevel(2);
+
   try {
     SetOpts();
   } catch (std::exception const &e) {

@@ -7,7 +7,7 @@
 source ${GIBUUTOOLSROOT}/setup.sh
 
 touch stdhep.running
-if ! GiBUUToStdHep -@ stdhep.conv.opts -o GiBUU.${JOB_NAME}.stdhep.root; then
+if ! GiBUUToStdHep -@ stdhep.conv.opts; then
   echo "[ERROR]: Failed to process to StdHep format."
   mv stdhep.running stdhep.Failed
   exit 1
