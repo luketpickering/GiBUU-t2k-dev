@@ -17,6 +17,8 @@ N_RUNS="10"
 N_ENSEMBLES="4000"
 N_H_ENSEMBLES=$(python -c "print ${N_ENSEMBLES}*2;")
 
+SCRIPTNAME="${0}"
+
 while [[ ${#} -gt 0 ]]; do
 
   key="$1"
@@ -30,6 +32,7 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       FLUX_FILE="$2"
+      echo "[OPT]: Reading flux from ${FLUX_FILE}"
       shift # past argument
       ;;
 
@@ -38,16 +41,17 @@ while [[ ${#} -gt 0 ]]; do
       FLUX_IS_ANTI="1"
       ;;
 
-      -W|--wrong-sign-flux-file)
+      # -W|--wrong-sign-flux-file)
 
-      if [[ ${#} -lt 2 ]]; then
-        echo "[ERROR]: ${1} expected a value."
-        exit 1
-      fi
+      # if [[ ${#} -lt 2 ]]; then
+      #   echo "[ERROR]: ${1} expected a value."
+      #   exit 1
+      # fi
 
-      WSB_FLUX_FILE="$2"
-      shift # past argument
-      ;;
+      # WSB_FLUX_FILE="$2"
+      # echo "[OPT]: Reading wrong sign flux from ${WSB_FLUX_FILE}"
+      # shift # past argument
+      # ;;
 
       -n|--num-cc-jobs)
 
@@ -57,6 +61,7 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       N_CC_JOBS="$2"
+      echo "[OPT]: Running ${N_CC_JOBS} CC right sign flux jobs"
       shift # past argument
       ;;
 
@@ -68,6 +73,7 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       TARGET_A="$2"
+      echo "[OPT]: Main target has nucleon number: ${TARGET_A}"
       shift # past argument
       ;;
 
@@ -79,11 +85,13 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       TARGET_Z="$2"
+      echo "[OPT]: Main target has proton number: ${TARGET_Z}"
       shift # past argument
       ;;
 
       -N|--do-NC)
       USE_NC="1"
+      echo "[OPT]: Running NC jobs"
       ;;
 
       -h|--num-h-in-target)
@@ -94,6 +102,7 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       N_H_IN_COMPOSITE="$2"
+      echo "[OPT]: Using a Hydrogen composite target with ${N_H_IN_COMPOSITE} Hydrogen components"
       shift
       ;;
 
@@ -105,6 +114,7 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       INPUT_JOBCARD="$2"
+      echo "[OPT]: Specialising the input jobcard: ${INPUT_JOBCARD}"
       shift
       ;;
 
@@ -116,13 +126,23 @@ while [[ ${#} -gt 0 ]]; do
       fi
 
       JOB_NAME="$2"
+      echo "[OPT]: Using JobName: ${JOB_NAME}"
       shift
       ;;
 
       -?|--help)
 
-      echo "[RUNLIKE] "
-
+      echo "[RUNLIKE] ${SCRIPTNAME}"
+      echo "         -?|--help <type=default_value>: Display this help message"
+      echo "         -F|--flux-file  </path/to/input/flux>:"
+      echo "         -A|--flux-is-anti-nu : Main flux component is anti-numu (NP/RHC/NF)"
+      echo "         -n|--num-cc-jobs <int=1> : The number of CC main flux component jobs to run"
+      echo "         -a|--target-a <int=12> : Needs to be known for correct stdhep event output"
+      echo "         -z|--target-z <int=6> : Needs to be known for correct stdhep event output"
+      echo "         -N|--do-NC : Will also run NC jobs"
+      echo "         -h|--num-h-in-target <int=0>: Whether to add any free protons to the composite target, useful for generating CHx targets"
+      echo "         -i|--input-job-card </path/to/input/jobcard=${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in>: input jobcard to specialise"
+      echo "         -J|--job-name <jobname=gibuu_gen> : The name of this job, used for directory structure"
       exit 0
       ;;
 
@@ -435,17 +455,21 @@ HOLD_JID=$(echo ${HOLD_JID} | tr " " ",")
 
 echo "[INFO]: Holding on ${HOLD_JID}"
 
-echo "-u 14 -a ${TARGET_A} -z ${TARGET_Z} -f ../CC_Flux/FinalEvents*.dat -F numu_flux,${FLUX_FILE}" > stdhep.conv.opts
+TOTAL_RESCALE=$(python -c "print (${TARGET_A} + ${N_H_IN_COMPOSITE});")
+
+echo "-u 14 -a ${TARGET_A} -z ${TARGET_Z} -W ${TARGET_A} -f ../CC_Flux/FinalEvents*.dat -F numu_flux,${FLUX_FILE}" > stdhep.conv.opts
 
 if [[ "${Flux_NC_JID}" ]]; then
-  echo "-N -f ../NC_Flux/FinalEvents*.dat" >> stdhep.conv.opts
+  echo "-N -W ${TARGET_A} -f ../NC_Flux/FinalEvents*.dat" >> stdhep.conv.opts
 fi
 if [[ "${Flux_CC_H_JID}" ]]; then
-  echo "-a 1 -z 1 -f ../CC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
+  echo "-a 1 -z 1 -W ${N_H_IN_COMPOSITE} -f ../CC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
 fi
 if [[ "${Flux_NC_H_JID}" ]]; then
-  echo "-N -a 1 -z 1 -f ../NC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
+  echo "-N -a 1 -z 1 -W ${N_H_IN_COMPOSITE} -f ../NC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
 fi
+
+echo "-R i${TOTAL_RESCALE}" >> stdhep.conv.opts
 
 qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
 
