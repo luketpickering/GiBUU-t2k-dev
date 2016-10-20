@@ -3,12 +3,19 @@
 FLUX_FILE=""
 WSB_FLUX_FILE=""
 INPUT_JOBCARD="${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in"
+FLUX_IS_ANTI="0"
 N_CC_JOBS="1"
 TARGET_A="12"
 TARGET_Z="6"
 USE_NC="0"
 N_H_IN_COMPOSITE="0"
 JOB_NAME="gibuu_gen"
+
+#Overall run options
+USE_OSET_INMED_BROAD=".true."
+N_RUNS="10"
+N_ENSEMBLES="4000"
+N_H_ENSEMBLES=$(python -c "print ${N_ENSEMBLES}*2;")
 
 while [[ ${#} -gt 0 ]]; do
 
@@ -24,6 +31,11 @@ while [[ ${#} -gt 0 ]]; do
 
       FLUX_FILE="$2"
       shift # past argument
+      ;;
+
+      -A|--flux-is-anti-nu)
+
+      FLUX_IS_ANTI="1"
       ;;
 
       -W|--wrong-sign-flux-file)
@@ -158,6 +170,18 @@ if [[ ! -e "${INPUT_JOBCARD}" ]]; then
 fi
 INPUT_JOBCARD=$(readlink -f ${INPUT_JOBCARD})
 
+if [[ "${FLUX_IS_ANTI}" == "1" ]]; then
+ FLUX_CC_NU_SPEC="-2"
+ FLUX_NC_NU_SPEC="-3"
+ WSB_FLUX_CC_NU_SPEC="2"
+ WSB_FLUX_NC_NU_SPEC="3"
+else
+ FLUX_CC_NU_SPEC="2"
+ FLUX_NC_NU_SPEC="3"
+ WSB_FLUX_CC_NU_SPEC="-2"
+ WSB_FLUX_NC_NU_SPEC="-3"
+fi
+
 ################################################################################
 ################################################################################
 mkdir ${JOB_NAME}
@@ -165,38 +189,39 @@ cd ${JOB_NAME}
 
 
 N_NC_JOBS="0"
-
 if [[ "${USE_NC}" != "0" ]]; then
   N_NC_JOBS=$(python -c "from math import ceil; print int(ceil(float(${N_CC_JOBS})/float(5)));")
   echo "[INFO]: Farming ${N_NC_JOBS} NC Jobs."
 fi
 
+HOLD_JID=""
+
 ################################################################################
-##             Generate: Main target numu CC
+##             Generate: Main target CC
 ################################################################################
-mkdir CC_numu; cd CC_numu
+mkdir CC_Flux; cd CC_Flux
 
 cp ${FLUX_FILE} flux.txt
 cp ${INPUT_JOBCARD} jobcard.in
 
 ################################################################################
-##                         Build Replacements: Main target numu CC
+##                         Build Replacements: Main target CC
 ################################################################################
 echo -e "__NU_FLAVOR_CODE__ 2\n\
-__NU_INTERACTION_TYPE__ 2\n\
+__NU_INTERACTION_TYPE__ ${FLUX_CC_NU_SPEC}\n\
 __FLUX_FILE__ ./flux.txt\n\
 __TARGET_A__ ${TARGET_A}\n\
 __TARGET_Z__ ${TARGET_Z}\n\
 __FIX_BE__ .true.\n\
-__N_ENSEMBLE__ 4000\n\
+__N_ENSEMBLE__ ${N_ENSEMBLES}\n\
 __N_TSTEPS__ 150\n\
-__N_RUNS__ 20\n\
+__N_RUNS__ ${N_RUNS}\n\
 __HIGH_FLUX_CUT__ 50\n\
-__OSET_DELTA_BROAD__ .true.\n\
+__OSET_DELTA_BROAD__ ${USE_OSET_INMED_BROAD}\n\
 __BUU_INPUT__ ./BUUInput" > job.rpl
 
 ################################################################################
-##                         Build jobcard: Main target numu CC
+##                         Build jobcard: Main target CC
 ################################################################################
 
 TMPFILEA=jobcard.in_tmp1
@@ -214,14 +239,188 @@ done < job.rpl
 mv ${TMPFILEA} job.card
 
 ################################################################################
-##                         Farm jobs: Main target numu CC
+##                         Farm jobs: Main target CC
 ################################################################################
 
-NUMU_CC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
-NUMU_CC_JID=$(echo "${NUMU_CC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
-echo "[INFO]: NUMU_CC jobs farmed with JID: ${NUMU_CC_JID}"
+Flux_CC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+Flux_CC_JID=$(echo "${Flux_CC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+echo "[INFO]: Flux_CC jobs farmed with JID: ${Flux_CC_JID}"
+
+HOLD_JID="${Flux_CC_JID}"
 
 cd ../
+
+
+if [[ "${N_NC_JOBS}" != "0" ]]; then
+################################################################################
+##             Generate: Main target NC
+################################################################################
+  mkdir NC_Flux; cd NC_Flux
+
+  cp ${FLUX_FILE} flux.txt
+  cp ${INPUT_JOBCARD} jobcard.in
+
+################################################################################
+##                         Build Replacements: Main target NC
+################################################################################
+  echo -e "__NU_FLAVOR_CODE__ 2\n\
+  __NU_INTERACTION_TYPE__ ${FLUX_NC_NU_SPEC}\n\
+  __FLUX_FILE__ ./flux.txt\n\
+  __TARGET_A__ ${TARGET_A}\n\
+  __TARGET_Z__ ${TARGET_Z}\n\
+  __FIX_BE__ .true.\n\
+  __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
+  __N_TSTEPS__ 150\n\
+  __N_RUNS__ ${N_RUNS}\n\
+  __HIGH_FLUX_CUT__ 50\n\
+  __OSET_DELTA_BROAD__ ${USE_OSET_INMED_BROAD}\n\
+  __BUU_INPUT__ ./BUUInput" > job.rpl
+
+################################################################################
+##                         Build jobcard: Main target NC
+################################################################################
+
+  TMPFILEA=jobcard.in_tmp1
+  TMPFILEB=jobcard.in_tmp2
+  cp jobcard.in ${TMPFILEA}
+
+  while read ln; do
+    FIRST=$(echo ${ln} | cut -d " " -f 1)
+    SECOND=$(echo ${ln} | cut -d " " -f 2)
+    echo -e "\tReplacing ${FIRST} with ${SECOND}"
+    cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+    mv ${TMPFILEB} ${TMPFILEA}
+  done < job.rpl
+
+  mv ${TMPFILEA} job.card
+
+################################################################################
+##                         Farm jobs: Main target NC
+################################################################################
+
+  Flux_NC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+  Flux_NC_JID=$(echo "${Flux_NC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+  echo "[INFO]: Flux_NC jobs farmed with JID: ${Flux_NC_JID}"
+
+  HOLD_JID="${HOLD_JID} ${Flux_NC_JID}"
+
+  cd ../
+fi # end N_NC_JOBS
+
+if [[ "${N_H_IN_COMPOSITE}" ]]; then
+
+  ################################################################################
+  ##             Generate: H target CC
+  ################################################################################
+  mkdir CC_Flux_H; cd CC_Flux_H
+
+  cp ${FLUX_FILE} flux.txt
+  cp ${INPUT_JOBCARD} jobcard.in
+
+  ################################################################################
+  ##                         Build Replacements: H target CC
+  ################################################################################
+  echo -e "__NU_FLAVOR_CODE__ 2\n\
+  __NU_INTERACTION_TYPE__ ${FLUX_CC_NU_SPEC}\n\
+  __FLUX_FILE__ ./flux.txt\n\
+  __TARGET_A__ 1\n\
+  __TARGET_Z__ 1\n\
+  __FIX_BE__ .false.\n\
+  __N_ENSEMBLE__ ${N_H_ENSEMBLES}\n\
+  __N_TSTEPS__ 0\n\
+  __N_RUNS__ ${N_RUNS}\n\
+  __HIGH_FLUX_CUT__ 50\n\
+  __OSET_DELTA_BROAD__ .false.\n\
+  __BUU_INPUT__ ./BUUInput" > job.rpl
+
+  ################################################################################
+  ##                         Build jobcard: H target CC
+  ################################################################################
+
+  TMPFILEA=jobcard.in_tmp1
+  TMPFILEB=jobcard.in_tmp2
+  cp jobcard.in ${TMPFILEA}
+
+  while read ln; do
+    FIRST=$(echo ${ln} | cut -d " " -f 1)
+    SECOND=$(echo ${ln} | cut -d " " -f 2)
+    echo -e "\tReplacing ${FIRST} with ${SECOND}"
+    cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+    mv ${TMPFILEB} ${TMPFILEA}
+  done < job.rpl
+
+  mv ${TMPFILEA} job.card
+
+  ################################################################################
+  ##                         Farm jobs: H target CC
+  ################################################################################
+
+  Flux_CC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+  Flux_CC_H_JID=$(echo "${Flux_CC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+  echo "[INFO]: Flux_CC H jobs farmed with JID: ${Flux_CC_H_JID}"
+
+  HOLD_JID="${HOLD_JID} ${Flux_CC_H_JID}"
+
+  cd ../
+
+
+  if [[ "${N_NC_JOBS}" != "0" ]]; then
+  ################################################################################
+  ##             Generate: H target NC
+  ################################################################################
+    mkdir NC_Flux_H; cd NC_Flux_H
+
+    cp ${FLUX_FILE} flux.txt
+    cp ${INPUT_JOBCARD} jobcard.in
+
+  ################################################################################
+  ##                         Build Replacements: H target NC
+  ################################################################################
+    echo -e "__NU_FLAVOR_CODE__ 2\n\
+    __NU_INTERACTION_TYPE__ ${FLUX_NC_NU_SPEC}\n\
+    __FLUX_FILE__ ./flux.txt\n\
+    __TARGET_A__ 1\n\
+    __TARGET_Z__ 1\n\
+    __FIX_BE__ .false.\n\
+    __N_ENSEMBLE__ ${N_H_ENSEMBLES}\n\
+    __N_TSTEPS__ 0\n\
+    __N_RUNS__ ${N_RUNS}\n\
+    __HIGH_FLUX_CUT__ 50\n\
+    __OSET_DELTA_BROAD__ .false.\n\
+    __BUU_INPUT__ ./BUUInput" > job.rpl
+
+  ################################################################################
+  ##                         Build jobcard: H target NC
+  ################################################################################
+
+    TMPFILEA=jobcard.in_tmp1
+    TMPFILEB=jobcard.in_tmp2
+    cp jobcard.in ${TMPFILEA}
+
+    while read ln; do
+      FIRST=$(echo ${ln} | cut -d " " -f 1)
+      SECOND=$(echo ${ln} | cut -d " " -f 2)
+      echo -e "\tReplacing ${FIRST} with ${SECOND}"
+      cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+      mv ${TMPFILEB} ${TMPFILEA}
+    done < job.rpl
+
+    mv ${TMPFILEA} job.card
+
+  ################################################################################
+  ##                         Farm jobs: H target NC
+  ################################################################################
+
+    Flux_NC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+    Flux_NC_H_JID=$(echo "${Flux_NC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+    echo "[INFO]: Flux_NC H jobs farmed with JID: ${Flux_NC_H_JID}"
+
+    HOLD_JID="${HOLD_JID} ${Flux_NC_H_JID}"
+
+    cd ../
+  fi # end N_NC_JOBS
+
+fi # end N_H_IN_COMPOSITE
 
 ################################################################################
 ################################################################################
@@ -232,9 +431,23 @@ cd ../
 
 mkdir stdhep; cd stdhep
 
-echo "-u 14 -a ${TARGET_A} -z ${TARGET_Z} -f CC_numu/FinalEvents*.dat -F numu_flux,${FLUX_FILE}" > stdhep.conv.opts
+HOLD_JID=$(echo ${HOLD_JID} | tr " " ",")
 
-qsub -hold_jid ${NUMU_CC_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
+echo "[INFO]: Holding on ${HOLD_JID}"
+
+echo "-u 14 -a ${TARGET_A} -z ${TARGET_Z} -f ../CC_Flux/FinalEvents*.dat -F numu_flux,${FLUX_FILE}" > stdhep.conv.opts
+
+if [[ "${Flux_NC_JID}" ]]; then
+  echo "-N -f ../NC_Flux/FinalEvents*.dat" >> stdhep.conv.opts
+fi
+if [[ "${Flux_CC_H_JID}" ]]; then
+  echo "-a 1 -z 1 -f ../CC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
+fi
+if [[ "${Flux_NC_H_JID}" ]]; then
+  echo "-N -a 1 -z 1 -f ../NC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
+fi
+
+qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
 
 cd ../
 
