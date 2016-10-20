@@ -203,19 +203,19 @@ if [[ "${FLUX_IS_ANTI}" == "1" ]]; then
  FLUX_NC_NU_SPEC="-3"
  WSB_FLUX_CC_NU_SPEC="2"
  WSB_FLUX_NC_NU_SPEC="3"
- FLUX_NAME="numu_flux"
- WSB_FLUX_NAME="numub_flux"
- NU_SPECIES="14"
- WSB_NU_SPECIES="-14"
-else
- FLUX_CC_NU_SPEC="2"
- FLUX_NC_NU_SPEC="3"
- WSB_FLUX_CC_NU_SPEC="-2"
- WSB_FLUX_NC_NU_SPEC="-3"
  FLUX_NAME="numub_flux"
  WSB_FLUX_NAME="numu_flux"
  NU_SPECIES="-14"
  WSB_NU_SPECIES="14"
+else # right sign is numu
+ FLUX_CC_NU_SPEC="2"
+ FLUX_NC_NU_SPEC="3"
+ WSB_FLUX_CC_NU_SPEC="-2"
+ WSB_FLUX_NC_NU_SPEC="-3"
+ FLUX_NAME="numu_flux"
+ WSB_FLUX_NAME="numub_flux"
+ NU_SPECIES="14"
+ WSB_NU_SPECIES="-14"
 fi
 
 ################################################################################
@@ -734,9 +734,6 @@ echo "[INFO]: Holding on ${HOLD_JID}"
 
 TOTAL_RESCALE=$(python -c "print (${TARGET_A} + ${N_H_IN_COMPOSITE});")
 
-
-WSB_FLUX_NAME
-
 echo "-u ${NU_SPECIES} -a ${TARGET_A} -z ${TARGET_Z} -W ${TARGET_A} -f ../CC_Flux/FinalEvents*.dat -F ${FLUX_NAME},${FLUX_FILE}" > stdhep.conv.opts
 
 if [[ "${Flux_NC_JID}" ]]; then
@@ -772,3 +769,5 @@ qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}
 
 cd ../
 
+echo -e "#!/bin/sh\necho \"Killing jobs: ${HOLD_JID}\";qdel ${HOLD_JID}" > killjobs.sh
+chmod +x killjobs.sh
