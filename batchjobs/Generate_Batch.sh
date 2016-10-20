@@ -202,11 +202,19 @@ if [[ "${FLUX_IS_ANTI}" == "1" ]]; then
  FLUX_NC_NU_SPEC="-3"
  WSB_FLUX_CC_NU_SPEC="2"
  WSB_FLUX_NC_NU_SPEC="3"
+ FLUX_NAME="numu_flux"
+ WSB_FLUX_NAME="numub_flux"
+ NU_SPECIES="14"
+ WSB_NU_SPECIES="-14"
 else
  FLUX_CC_NU_SPEC="2"
  FLUX_NC_NU_SPEC="3"
  WSB_FLUX_CC_NU_SPEC="-2"
  WSB_FLUX_NC_NU_SPEC="-3"
+ FLUX_NAME="numub_flux"
+ WSB_FLUX_NAME="numu_flux"
+ NU_SPECIES="-14"
+ WSB_NU_SPECIES="14"
 fi
 
 ################################################################################
@@ -214,12 +222,24 @@ fi
 mkdir ${JOB_NAME}
 cd ${JOB_NAME}
 
+N_CC_JOBS_WSB="0"
+if [[ "${WSB_FLUX_FILE}" ]]; then
+  N_CC_JOBS_WSB=$(python -c "from math import ceil; print int(ceil(float(${N_CC_JOBS})/float(10)));")
+  echo "[INFO]: Farming ${N_CC_JOBS_WSB} CC wrong sign background jobs."
+fi
 
 N_NC_JOBS="0"
+N_NC_JOBS_WSB="0"
 if [[ "${USE_NC}" != "0" ]]; then
   N_NC_JOBS=$(python -c "from math import ceil; print int(ceil(float(${N_CC_JOBS})/float(5)));")
   echo "[INFO]: Farming ${N_NC_JOBS} NC Jobs."
+  if [[ "${WSB_FLUX_FILE}" ]]; then
+    N_NC_JOBS_WSB=$(python -c "from math import ceil; print int(ceil(float(${N_CC_JOBS_WSB})/float(5)));")
+    echo "[INFO]: Farming ${N_NC_JOBS_WSB} NC wrong sign background jobs."
+  fi
 fi
+
+
 
 HOLD_JID=""
 
@@ -454,7 +474,252 @@ if [[ "${N_H_IN_COMPOSITE}" ]]; then
 fi # end N_H_IN_COMPOSITE
 
 ################################################################################
+
+
+
+##                    Generate Wrong sign backgrounds
+
+
+
 ################################################################################
+
+
+if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
+  ################################################################################
+  ##             Generate: WSB Main target CC
+  ################################################################################
+  mkdir CC_Flux_WSB; cd CC_Flux_WSB
+
+  cp ${WSB_FLUX_FILE} wsb_flux.txt
+  cp ${INPUT_JOBCARD} jobcard.in
+
+  ################################################################################
+  ##                         Build Replacements: WSB Main target CC
+  ################################################################################
+  echo -e "__NU_FLAVOR_CODE__ 2\n\
+  __NU_INTERACTION_TYPE__ ${WSB_FLUX_CC_NU_SPEC}\n\
+  __FLUX_FILE__ ./wsb_flux.txt\n\
+  __TARGET_A__ ${TARGET_A}\n\
+  __TARGET_Z__ ${TARGET_Z}\n\
+  __FIX_BE__ .true.\n\
+  __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
+  __N_TSTEPS__ 150\n\
+  __N_RUNS__ ${N_RUNS}\n\
+  __HIGH_FLUX_CUT__ 50\n\
+  __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
+  __OSET_DELTA_BROAD__ ${USE_OSET_INMED_BROAD}\n\
+  __BUU_INPUT__ ./BUUInput" > job.rpl
+
+  ################################################################################
+  ##                         Build jobcard: WSB Main target CC
+  ################################################################################
+
+  TMPFILEA=jobcard.in_tmp1
+  TMPFILEB=jobcard.in_tmp2
+  cp jobcard.in ${TMPFILEA}
+
+  while read ln; do
+    FIRST=$(echo ${ln} | cut -d " " -f 1)
+    SECOND=$(echo ${ln} | cut -d " " -f 2)
+    echo -e "\tReplacing ${FIRST} with ${SECOND}"
+    cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+    mv ${TMPFILEB} ${TMPFILEA}
+  done < job.rpl
+
+  mv ${TMPFILEA} job.card
+
+  ################################################################################
+  ##                         Farm jobs: WSB Main target CC
+  ################################################################################
+
+  Flux_WSB_CC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+  Flux_WSB_CC_JID=$(echo "${Flux_WSB_CC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+  echo "[INFO]: Flux_WSB_CC jobs farmed with JID: ${Flux_WSB_CC_JID}"
+
+  HOLD_JID="${HOLD_JID} ${Flux_WSB_CC_JID}"
+
+  cd ../
+
+
+  if [[ "${N_NC_JOBS_WSB}" != "0" ]]; then
+  ################################################################################
+  ##             Generate: WSB Main target NC
+  ################################################################################
+    mkdir NC_Flux_WSB; cd NC_Flux_WSB
+
+    cp ${WSB_FLUX_FILE} wsb_flux.txt
+    cp ${INPUT_JOBCARD} jobcard.in
+
+  ################################################################################
+  ##                         Build Replacements: WSB Main target NC
+  ################################################################################
+    echo -e "__NU_FLAVOR_CODE__ 2\n\
+    __NU_INTERACTION_TYPE__ ${WSB_FLUX_NC_NU_SPEC}\n\
+    __FLUX_FILE__ ./wsb_flux.txt\n\
+    __TARGET_A__ ${TARGET_A}\n\
+    __TARGET_Z__ ${TARGET_Z}\n\
+    __FIX_BE__ .true.\n\
+    __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
+    __N_TSTEPS__ 150\n\
+    __N_RUNS__ ${N_RUNS}\n\
+    __HIGH_FLUX_CUT__ 50\n\
+    __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
+    __OSET_DELTA_BROAD__ ${USE_OSET_INMED_BROAD}\n\
+    __BUU_INPUT__ ./BUUInput" > job.rpl
+
+  ################################################################################
+  ##                         Build jobcard: WSB Main target NC
+  ################################################################################
+
+    TMPFILEA=jobcard.in_tmp1
+    TMPFILEB=jobcard.in_tmp2
+    cp jobcard.in ${TMPFILEA}
+
+    while read ln; do
+      FIRST=$(echo ${ln} | cut -d " " -f 1)
+      SECOND=$(echo ${ln} | cut -d " " -f 2)
+      echo -e "\tReplacing ${FIRST} with ${SECOND}"
+      cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+      mv ${TMPFILEB} ${TMPFILEA}
+    done < job.rpl
+
+    mv ${TMPFILEA} job.card
+
+  ################################################################################
+  ##                         Farm jobs: WSB Main target NC
+  ################################################################################
+
+    Flux_WSB_NC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+    Flux_WSB_NC_JID=$(echo "${Flux_WSB_NC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+    echo "[INFO]: Flux_WSB_NC jobs farmed with JID: ${Flux_WSB_NC_JID}"
+
+    HOLD_JID="${HOLD_JID} ${Flux_WSB_NC_JID}"
+
+    cd ../
+  fi # end N_NC_JOBS
+
+  if [[ "${N_H_IN_COMPOSITE}" ]]; then
+
+    ################################################################################
+    ##             Generate: WSB H target CC
+    ################################################################################
+    mkdir CC_Flux_WSB_H; cd CC_Flux_WSB_H
+
+    cp ${WSB_FLUX_FILE} wsb_flux.txt
+    cp ${INPUT_JOBCARD} jobcard.in
+
+    ################################################################################
+    ##                         Build Replacements: WSB H target CC
+    ################################################################################
+    echo -e "__NU_FLAVOR_CODE__ 2\n\
+    __NU_INTERACTION_TYPE__ ${WSB_FLUX_CC_NU_SPEC}\n\
+    __FLUX_FILE__ ./wsb_flux.txt\n\
+    __TARGET_A__ 1\n\
+    __TARGET_Z__ 1\n\
+    __FIX_BE__ .false.\n\
+    __N_ENSEMBLE__ ${N_H_ENSEMBLES}\n\
+    __N_TSTEPS__ 0\n\
+    __N_RUNS__ ${N_RUNS}\n\
+    __HIGH_FLUX_CUT__ 50\n\
+    __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
+    __OSET_DELTA_BROAD__ .false.\n\
+    __BUU_INPUT__ ./BUUInput" > job.rpl
+
+    ################################################################################
+    ##                         Build jobcard: WSB H target CC
+    ################################################################################
+
+    TMPFILEA=jobcard.in_tmp1
+    TMPFILEB=jobcard.in_tmp2
+    cp jobcard.in ${TMPFILEA}
+
+    while read ln; do
+      FIRST=$(echo ${ln} | cut -d " " -f 1)
+      SECOND=$(echo ${ln} | cut -d " " -f 2)
+      echo -e "\tReplacing ${FIRST} with ${SECOND}"
+      cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+      mv ${TMPFILEB} ${TMPFILEA}
+    done < job.rpl
+
+    mv ${TMPFILEA} job.card
+
+    ################################################################################
+    ##                         Farm jobs: WSB H target CC
+    ################################################################################
+
+    Flux_WSB_CC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+    Flux_WSB_CC_H_JID=$(echo "${Flux_WSB_CC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+    echo "[INFO]: Flux_WSB_CC H jobs farmed with JID: ${Flux_WSB_CC_H_JID}"
+
+    HOLD_JID="${HOLD_JID} ${Flux_WSB_CC_H_JID}"
+
+    cd ../
+
+
+    if [[ "${N_NC_JOBS_WSB}" != "0" ]]; then
+    ################################################################################
+    ##             Generate: WSB H target NC
+    ################################################################################
+      mkdir NC_Flux_WSB_H; cd NC_Flux_WSB_H
+
+      cp ${WSB_FLUX_FILE} wsb_flux.txt
+      cp ${INPUT_JOBCARD} jobcard.in
+
+    ################################################################################
+    ##                         Build Replacements: WSB H target NC
+    ################################################################################
+      echo -e "__NU_FLAVOR_CODE__ 2\n\
+      __NU_INTERACTION_TYPE__ ${WSB_FLUX_NC_NU_SPEC}\n\
+      __FLUX_FILE__ ./wsb_flux.txt\n\
+      __TARGET_A__ 1\n\
+      __TARGET_Z__ 1\n\
+      __FIX_BE__ .false.\n\
+      __N_ENSEMBLE__ ${N_H_ENSEMBLES}\n\
+      __N_TSTEPS__ 0\n\
+      __N_RUNS__ ${N_RUNS}\n\
+      __HIGH_FLUX_CUT__ 50\n\
+      __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
+      __OSET_DELTA_BROAD__ .false.\n\
+      __BUU_INPUT__ ./BUUInput" > job.rpl
+
+    ################################################################################
+    ##                         Build jobcard: WSB H target NC
+    ################################################################################
+
+      TMPFILEA=jobcard.in_tmp1
+      TMPFILEB=jobcard.in_tmp2
+      cp jobcard.in ${TMPFILEA}
+
+      while read ln; do
+        FIRST=$(echo ${ln} | cut -d " " -f 1)
+        SECOND=$(echo ${ln} | cut -d " " -f 2)
+        echo -e "\tReplacing ${FIRST} with ${SECOND}"
+        cat ${TMPFILEA} | sed "s:${FIRST}:${SECOND}:" > ${TMPFILEB}
+        mv ${TMPFILEB} ${TMPFILEA}
+      done < job.rpl
+
+      mv ${TMPFILEA} job.card
+
+    ################################################################################
+    ##                         Farm jobs: WSB H target NC
+    ################################################################################
+
+      Flux_WSB_NC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+      Flux_WSB_NC_H_JID=$(echo "${Flux_WSB_NC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+      echo "[INFO]: Flux_WSB_NC H jobs farmed with JID: ${Flux_WSB_NC_H_JID}"
+
+      HOLD_JID="${HOLD_JID} ${Flux_WSB_NC_H_JID}"
+
+      cd ../
+    fi # end N_NC_JOBS
+
+  fi # end N_H_IN_COMPOSITE
+
+fi # end N_CC_JOBS_WSB
+################################################################################
+################################################################################
+
+
 
 ################################################################################
 ##                 Collect up the events
@@ -468,7 +733,10 @@ echo "[INFO]: Holding on ${HOLD_JID}"
 
 TOTAL_RESCALE=$(python -c "print (${TARGET_A} + ${N_H_IN_COMPOSITE});")
 
-echo "-u 14 -a ${TARGET_A} -z ${TARGET_Z} -W ${TARGET_A} -f ../CC_Flux/FinalEvents*.dat -F numu_flux,${FLUX_FILE}" > stdhep.conv.opts
+
+WSB_FLUX_NAME
+
+echo "-u ${NU_SPECIES} -a ${TARGET_A} -z ${TARGET_Z} -W ${TARGET_A} -f ../CC_Flux/FinalEvents*.dat -F ${FLUX_NAME},${FLUX_FILE}" > stdhep.conv.opts
 
 if [[ "${Flux_NC_JID}" ]]; then
   echo "-N -W ${TARGET_A} -f ../NC_Flux/FinalEvents*.dat" >> stdhep.conv.opts
@@ -479,6 +747,23 @@ fi
 if [[ "${Flux_NC_H_JID}" ]]; then
   echo "-N -a 1 -z 1 -W ${N_H_IN_COMPOSITE} -f ../NC_Flux_H/FinalEvents*.dat" >> stdhep.conv.opts
 fi
+
+################################################################################
+# WSB
+if [[ "${Flux_WSB_CC_JID}" ]]; then
+  echo "-u ${WSB_NU_SPECIES} -a ${TARGET_A} -z ${TARGET_Z} -W ${TARGET_A} -f ../CC_Flux_WSB/FinalEvents*.dat -F ${WSB_FLUX_NAME},${WSB_FLUX_FILE}" >> stdhep.conv.opts
+fi
+if [[ "${Flux_WSB_NC_JID}" ]]; then
+  echo "-N -W ${TARGET_A} -f ../NC_Flux_WSB/FinalEvents*.dat" >> stdhep.conv.opts
+fi
+if [[ "${Flux_WSB_CC_H_JID}" ]]; then
+  echo "-a 1 -z 1 -W ${N_H_IN_COMPOSITE} -f ../CC_Flux_WSB_H/FinalEvents*.dat" >> stdhep.conv.opts
+fi
+if [[ "${Flux_WSB_NC_H_JID}" ]]; then
+  echo "-N -a 1 -z 1 -W ${N_H_IN_COMPOSITE} -f ../NC_Flux_WSB_H/FinalEvents*.dat" >> stdhep.conv.opts
+fi
+################################################################################
+
 
 echo "-R i${TOTAL_RESCALE}" >> stdhep.conv.opts
 
