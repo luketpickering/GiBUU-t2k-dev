@@ -183,7 +183,7 @@ cp ${INPUT_JOBCARD} jobcard.in
 ################################################################################
 echo -e "__NU_FLAVOR_CODE__ 2\n\
 __NU_INTERACTION_TYPE__ 2\n\
-__FLUX_FILE__ ./numu_flux.txt\n\
+__FLUX_FILE__ ./flux.txt\n\
 __TARGET_A__ ${TARGET_A}\n\
 __TARGET_Z__ ${TARGET_Z}\n\
 __FIX_BE__ .true.\n\
