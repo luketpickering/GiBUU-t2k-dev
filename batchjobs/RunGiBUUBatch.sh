@@ -20,6 +20,8 @@ cp ${FLUX} ${TMP}/GiBUU_${SGE_TASK_ID}/
 
 cd ${TMP}/GiBUU_${SGE_TASK_ID}
 
+MakeBUUInputSoftlink
+
 sleep ${SGE_TASK_ID}
 
 SEED=${RANDOM}

@@ -142,7 +142,7 @@ if [[ ! -e ${GIBUUTOOLSROOT}/setup.sh ]]; then
 fi
 
 hash GiBUU.x &> /dev/null
-if [[ "${?}" != "0" ]] then
+if [[ "${?}" != "0" ]]; then
   echo "[ERROR]: Expected to find the GiBUU executable, GiBUU.x, but it wasn't available."
   exit 1
 fi
@@ -178,14 +178,12 @@ mkdir CC_numu; cd CC_numu
 cp ${FLUX_FILE} flux.txt
 cp ${INPUT_JOBCARD} jobcard.in
 
-MakeBUUInputSoftlink
-
 ################################################################################
 ##                         Build Replacements: Main target numu CC
 ################################################################################
 echo -e "__NU_FLAVOR_CODE__ 2\n\
 __NU_INTERACTION_TYPE__ 2\n\
-__FLUX_FILE__ ./../numu_flux.txt\n\
+__FLUX_FILE__ ./numu_flux.txt\n\
 __TARGET_A__ ${TARGET_A}\n\
 __TARGET_Z__ ${TARGET_Z}\n\
 __FIX_BE__ .true.\n\
@@ -194,7 +192,7 @@ __N_TSTEPS__ 150\n\
 __N_RUNS__ 20\n\
 __HIGH_FLUX_CUT__ 50\n\
 __OSET_DELTA_BROAD__ .true.\n\
-__BUU_INPUT__ ../BUUInput" > job.rpl
+__BUU_INPUT__ ./BUUInput" > job.rpl
 
 ################################################################################
 ##                         Build jobcard: Main target numu CC
