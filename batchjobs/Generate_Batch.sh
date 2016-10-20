@@ -156,7 +156,7 @@ if [[ ! -e "${INPUT_JOBCARD}" ]]; then
   echo "[ERROR]: Specified input job card \"${INPUT_JOBCARD}\" does not exist."
   exit 1
 fi
-INPUT_JOBCARD=$(readlink -f $2)
+INPUT_JOBCARD=$(readlink -f ${INPUT_JOBCARD})
 
 ################################################################################
 ################################################################################
