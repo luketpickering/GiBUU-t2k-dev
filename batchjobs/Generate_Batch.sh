@@ -766,9 +766,9 @@ fi
 echo "-R i${TOTAL_RESCALE}" >> stdhep.conv.opts
 echo "-o ${JOB_NAME}_GiBUU.stdhep.root" >> stdhep.conv.opts
 
-qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
-
+STDHEPPROC_JID_MSG=$(qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh)
+STDHEPPROC_JID=$(echo "${STDHEPPROC_JID_MSG}" | sed "s|^Your job \([0-9]\+\) .*|\1|g")
 cd ../
 
-echo -e "#!/bin/sh\necho \"Killing jobs: ${HOLD_JID}\";qdel ${HOLD_JID}" > killjobs.sh
+echo -e "#!/bin/sh\necho \"Killing jobs: ${HOLD_JID}\";qdel ${HOLD_JID},${STDHEPPROC_JID}" > killjobs.sh
 chmod +x killjobs.sh
