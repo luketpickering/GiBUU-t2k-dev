@@ -217,8 +217,8 @@ mv ${TMPFILEA} job.card
 ##                         Farm jobs: Main target numu CC
 ################################################################################
 
-NUMU_CC_JID=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
-
+NUMU_CC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+NUMU_CC_JID=$(echo "${NUMU_CC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
 echo "[INFO]: NUMU_CC jobs farmed with JID: ${NUMU_CC_JID}"
 
 cd ../
@@ -234,7 +234,7 @@ mkdir stdhep; cd stdhep
 
 echo "-u 14 -a ${TARGET_A} -z ${TARGET_Z} -f CC_numu/FinalEvents*.dat -F numu_flux,${FLUX_FILE}" > stdhep.conv.opts
 
-qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
+qsub -hold_jid ${NUMU_CC_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh
 
 cd ../
 
