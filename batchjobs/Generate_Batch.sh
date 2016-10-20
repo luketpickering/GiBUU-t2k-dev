@@ -10,6 +10,7 @@ TARGET_Z="6"
 USE_NC="0"
 N_H_IN_COMPOSITE="0"
 JOB_NAME="gibuu_gen"
+DENSITY_SWITCH="2"
 
 #Overall run options
 USE_OSET_INMED_BROAD=".true."
@@ -94,6 +95,11 @@ while [[ ${#} -gt 0 ]]; do
       echo "[OPT]: Running NC jobs"
       ;;
 
+      -W|--woods-saxon-density)
+      DENSITY_SWITCH="3"
+      echo "[OPT]: Using Woods Saxon density"
+      ;;
+
       -h|--num-h-in-target)
 
       if [[ ${#} -lt 2 ]]; then
@@ -143,6 +149,7 @@ while [[ ${#} -gt 0 ]]; do
       echo "         -h|--num-h-in-target <int=0>: Whether to add any free protons to the composite target, useful for generating CHx targets"
       echo "         -i|--input-job-card </path/to/input/jobcard=${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in>: input jobcard to specialise"
       echo "         -J|--job-name <jobname=gibuu_gen> : The name of this job, used for directory structure"
+      echo "         -W|--woods-saxon-density : Use Woods Saxon density, for targets, such as Ar40, that do not have an NPA 554 parameterisation"
       exit 0
       ;;
 
@@ -237,6 +244,7 @@ __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
 __N_TSTEPS__ 150\n\
 __N_RUNS__ ${N_RUNS}\n\
 __HIGH_FLUX_CUT__ 50\n\
+__DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
 __OSET_DELTA_BROAD__ ${USE_OSET_INMED_BROAD}\n\
 __BUU_INPUT__ ./BUUInput" > job.rpl
 
@@ -293,6 +301,7 @@ if [[ "${N_NC_JOBS}" != "0" ]]; then
   __N_TSTEPS__ 150\n\
   __N_RUNS__ ${N_RUNS}\n\
   __HIGH_FLUX_CUT__ 50\n\
+  __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
   __OSET_DELTA_BROAD__ ${USE_OSET_INMED_BROAD}\n\
   __BUU_INPUT__ ./BUUInput" > job.rpl
 
@@ -350,6 +359,7 @@ if [[ "${N_H_IN_COMPOSITE}" ]]; then
   __N_TSTEPS__ 0\n\
   __N_RUNS__ ${N_RUNS}\n\
   __HIGH_FLUX_CUT__ 50\n\
+  __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
   __OSET_DELTA_BROAD__ .false.\n\
   __BUU_INPUT__ ./BUUInput" > job.rpl
 
@@ -406,6 +416,7 @@ if [[ "${N_H_IN_COMPOSITE}" ]]; then
     __N_TSTEPS__ 0\n\
     __N_RUNS__ ${N_RUNS}\n\
     __HIGH_FLUX_CUT__ 50\n\
+    __DENSITY_SWITCH__ ${DENSITY_SWITCH}\n\
     __OSET_DELTA_BROAD__ .false.\n\
     __BUU_INPUT__ ./BUUInput" > job.rpl
 

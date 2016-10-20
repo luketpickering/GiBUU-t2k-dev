@@ -119,7 +119,7 @@
 &target
   target_Z=__TARGET_Z__
   target_A=__TARGET_A__
-  densitySwitch_Static=2          ! 0: density=0.0, 1: Wood-Saxon by Lenske, 2 : NPA 554, 3: Wood-Saxon by Lenske, different neutron and proton radii,
+  densitySwitch_Static=__DENSITY_SWITCH__          ! 0: density=0.0, 1: Wood-Saxon by Lenske, 2 : NPA 554, 3: Wood-Saxon by Lenske, different neutron and proton radii,
           ! 5: density distribution is a sphere with density according to the input value of "fermiMomentum_input".
   fermiMomentum_input=0.225       ! Input value of the fermi momentum for densitySwitch_static=5.
   fermiMotion=.true.
