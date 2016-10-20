@@ -37,29 +37,29 @@ ${GIBUUTOOLSROOT}/batchjobs/Generate_Batch.sh \
 
 
 ${GIBUUTOOLSROOT}/batchjobs/Generate_Batch.sh \
-  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_rhc_numubar_2015.txt \
-  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_rhc_numu_2015.txt \
+  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numubar_rhc_2015.txt \
+  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numu_rhc_2015.txt \
   -A -n 10 -a 12 -z 6 -N -h 1 \
   -i ${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in \
   -J MINERvA_RHC_CH_BNLPiProd
 
 ${GIBUUTOOLSROOT}/batchjobs/Generate_Batch.sh \
-  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_rhc_numubar_2015.txt \
-  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_rhc_numu_2015.txt \
+  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numubar_rhc_2015.txt \
+  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numu_rhc_2015.txt \
   -A -n 10 -a 12 -z 6 -N -h 1 \
   -i ${GIBUUTOOLSROOT}/batchjobs/GiBUU_ANLPiProd.job.in \
   -J MINERvA_RHC_CH_ANLPiProd
 
 ${GIBUUTOOLSROOT}/batchjobs/Generate_Batch.sh \
-  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_fhc_numu_2015.txt \
-  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_fhc_numubar_2015.txt \
+  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numu_fhc_2015.txt \
+  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numubar_fhc_2015.txt \
   -n 10 -a 12 -z 6 -N -h 1 \
   -i ${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in \
   -J MINERvA_FHC_CH_BNLPiProd
 
 ${GIBUUTOOLSROOT}/batchjobs/Generate_Batch.sh \
-  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_fhc_numu_2015.txt \
-  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_fhc_numubar_2015.txt \
+  -F ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numu_fhc_2015.txt \
+  -w ${GIBUUTOOLSROOT}/batchjobs/fluxes/MINERvA_numubar_fhc_2015.txt \
   -n 10 -a 12 -z 6 -N -h 1 \
   -i ${GIBUUTOOLSROOT}/batchjobs/GiBUU_ANLPiProd.job.in \
   -J MINERvA_FHC_CH_ANLPiProd
