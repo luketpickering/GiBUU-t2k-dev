@@ -291,7 +291,7 @@ mv ${TMPFILEA} job.card
 ##                         Farm jobs: Main target CC
 ################################################################################
 
-Flux_CC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+Flux_CC_JID_MSG=$(qsub -N Gen_F_CC -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
 Flux_CC_JID=$(echo "${Flux_CC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
 echo "[INFO]: Flux_CC jobs farmed with JID: ${Flux_CC_JID}"
 
@@ -348,7 +348,7 @@ if [[ "${N_NC_JOBS}" != "0" ]]; then
 ##                         Farm jobs: Main target NC
 ################################################################################
 
-  Flux_NC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+  Flux_NC_JID_MSG=$(qsub -N Gen_F_NC -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
   Flux_NC_JID=$(echo "${Flux_NC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
   echo "[INFO]: Flux_NC jobs farmed with JID: ${Flux_NC_JID}"
 
@@ -406,7 +406,7 @@ if [[ "${N_H_IN_COMPOSITE}" ]]; then
   ##                         Farm jobs: H target CC
   ################################################################################
 
-  Flux_CC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+  Flux_CC_H_JID_MSG=$(qsub -N Gen_F_CC_H -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
   Flux_CC_H_JID=$(echo "${Flux_CC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
   echo "[INFO]: Flux_CC H jobs farmed with JID: ${Flux_CC_H_JID}"
 
@@ -463,7 +463,7 @@ if [[ "${N_H_IN_COMPOSITE}" ]]; then
   ##                         Farm jobs: H target NC
   ################################################################################
 
-    Flux_NC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+    Flux_NC_H_JID_MSG=$(qsub -N Gen_F_NC_H -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
     Flux_NC_H_JID=$(echo "${Flux_NC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
     echo "[INFO]: Flux_NC H jobs farmed with JID: ${Flux_NC_H_JID}"
 
@@ -533,7 +533,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
   ##                         Farm jobs: WSB Main target CC
   ################################################################################
 
-  Flux_WSB_CC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+  Flux_WSB_CC_JID_MSG=$(qsub -N Gen_WSBF_CC -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
   Flux_WSB_CC_JID=$(echo "${Flux_WSB_CC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
   echo "[INFO]: Flux_WSB_CC jobs farmed with JID: ${Flux_WSB_CC_JID}"
 
@@ -590,7 +590,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
   ##                         Farm jobs: WSB Main target NC
   ################################################################################
 
-    Flux_WSB_NC_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+    Flux_WSB_NC_JID_MSG=$(qsub -N Gen_WSBF_NC -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
     Flux_WSB_NC_JID=$(echo "${Flux_WSB_NC_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
     echo "[INFO]: Flux_WSB_NC jobs farmed with JID: ${Flux_WSB_NC_JID}"
 
@@ -648,7 +648,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
     ##                         Farm jobs: WSB H target CC
     ################################################################################
 
-    Flux_WSB_CC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+    Flux_WSB_CC_H_JID_MSG=$(qsub -N Gen_WSBF_CC_H -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
     Flux_WSB_CC_H_JID=$(echo "${Flux_WSB_CC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
     echo "[INFO]: Flux_WSB_CC H jobs farmed with JID: ${Flux_WSB_CC_H_JID}"
 
@@ -705,7 +705,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
     ##                         Farm jobs: WSB H target NC
     ################################################################################
 
-      Flux_WSB_NC_H_JID_MSG=$(qsub -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
+      Flux_WSB_NC_H_JID_MSG=$(qsub -N Gen_WSBF_NC_H -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_NC_JOBS_WSB} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
       Flux_WSB_NC_H_JID=$(echo "${Flux_WSB_NC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
       echo "[INFO]: Flux_WSB_NC H jobs farmed with JID: ${Flux_WSB_NC_H_JID}"
 
