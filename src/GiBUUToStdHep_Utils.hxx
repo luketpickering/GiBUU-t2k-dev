@@ -112,6 +112,7 @@ std::string WriteGiBUUHistory(Long_t HistCode);
 /// * 31 : Delta0
 /// * 32 : Delta+
 /// * 41 : Multi pion production
+/// * 42 : 2p2h
 /// * 46 : DIS
 /// * 47 : Higher resonance, charge: -1
 /// * 48 : Higher resonance, charge: 0

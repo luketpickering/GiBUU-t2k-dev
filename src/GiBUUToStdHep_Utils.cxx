@@ -1008,7 +1008,7 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     }
     case 35:
     case 36: {  // MEC/2p-2h
-      return (IsNu ? 1 : -1) * 2;
+      return (IsNu ? 1 : -1) * (2 + 40 * (!IsCC));
     }
     case 37: {  // MultiPi
       return (IsNu ? 1 : -1) * (21 + 20 * (!IsCC));

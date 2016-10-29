@@ -68,5 +68,25 @@ Here should be the fastest way to make a GiBUU prediction.
   * `Generate_DUNE_numuCC_Ar_Events_GIBUU`
   * `Generate_NuMi_numuCC_Ar_Events_GIBUU`
 
+## Cluster jobs
+
   To generate a serious amounts of events, using a batch system is advised.
   **Important:** Remeber to change the `SEED` for each job!
+
+  There is a set of example scripts that live in ${GIBUUTOOLSROOT}/batchjobs.
+  These are written to work with SGE qsub. Executing GenerateAll.sh will
+  send off about 500 jobs, generating O(2 million) events for 5 fluxes, and at
+  two settings for each flux. It will also hold queue the conversion to StdHep
+  process, which will automatically run after the events have been generated.
+
+  The Generate_Batch.sh script is a more generic script for submitting jobs to
+  create a single event vector which contains interactions on some target,
+  optionally with <N> hydrogen atoms (e.g. CH2-target at MiniBooNE), optionally
+  also generating NC interactions, and optionally you can also include the
+  wrong-sign background flux (numubar in numu beam and vice versa). Execute
+  `${GIBUUTOOLS}/bacthjobs/Generate_Batch.sh -?` to see a list of options.
+
+  If you environment for executing GiBUU requires any additional setup other
+  than `${GIBUUTOOLS}/setup.sh`, then you will need to add your environment
+  setup to ${GIBUUTOOLS}/batchjobs/RunGiBUUBatch.sh, this is the script that
+  will be run on the compute nodes.

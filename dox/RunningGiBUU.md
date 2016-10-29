@@ -21,7 +21,7 @@
       &input
         numEnsembles=4000 ! Number of nuclei to simultaneously model per run.
         eventtype=5       ! Neutrino induced event
-        numTimeSteps=150  ! Number of hadronic transport steps to simulation
+        numTimeSteps=150  ! Number of hadronic transport steps to simulate
         !...
       /
 
@@ -55,7 +55,7 @@
   [Nuclear Physics A 554 4 509 (1993)](http://www.sciencedirect.com/science/article/pii/037594749390245S)
   and [Atomic Data and Nuclear Data Tables 14 5 479 (1974)](http://www.sciencedirect.com/science/article/pii/S0092640X74800021)
   can be used (`target:densitySwitch_Static=2`). However, for some nuclei the
-  specific experimental data is not available within GiBUU, and thus
+  specific data is not available, and thus
   `target:densitySwitch_Static=3` should be used --- notably to simulate on
   Ar40 you must use the Wood-Saxon density.
 
