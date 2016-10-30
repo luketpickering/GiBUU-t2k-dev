@@ -136,6 +136,10 @@ while [[ ${#} -gt 0 ]]; do
       shift
       ;;
 
+      -B|--no-oset-broadening)
+      USE_OSET_INMED_BROAD=".false."
+      ;;
+
       -?|--help)
 
       echo "[RUNLIKE] ${SCRIPTNAME}"
@@ -151,6 +155,7 @@ while [[ ${#} -gt 0 ]]; do
       echo "         -i|--input-job-card </path/to/input/jobcard=${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in>: input jobcard to specialise"
       echo "         -J|--job-name <jobname=gibuu_gen> : The name of this job, used for directory structure"
       echo "         -W|--woods-saxon-density : Use Woods Saxon density, for targets, such as Ar40, that do not have an NPA 554 parameterisation"
+      echo "         -B|--no-oset-broadening : Do not use collisional broadening of baryonic resonances"
       exit 0
       ;;
 
