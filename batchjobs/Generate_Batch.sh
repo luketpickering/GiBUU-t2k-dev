@@ -198,14 +198,16 @@ if [[ "${?}" != "0" ]]; then
   exit 1
 fi
 
-if [[ "${WSB_FLUX_FILE}" ]] && [[ ! -e "${WSB_FLUX_FILE}" ]]; then
-  echo "[ERROR]: Wrong sign flux file: \"${WSB_FLUX_FILE}\" could not be found."
-  exit 1
-else
-  NLinesFluxWSB=$(cat ${WSB_FLUX_FILE} | wc -l)
-  if [[ ${NLinesFlux} -gt 210 ]]; then
-    echo "[ERROR]: The input flux file: ${WSB_FLUX_FILE} has too many lines (${NLinesFluxWSB}), GiBUU can read files with a maximum of 210 lines. Please shorten it."
+if [[ "${WSB_FLUX_FILE}" ]]; then
+  if [[ ! -e "${WSB_FLUX_FILE}" ]]; then
+    echo "[ERROR]: Wrong sign flux file: \"${WSB_FLUX_FILE}\" could not be found."
     exit 1
+  else
+    NLinesFluxWSB=$(cat ${WSB_FLUX_FILE} | wc -l)
+    if [[ ${NLinesFlux} -gt 210 ]]; then
+      echo "[ERROR]: The input flux file: ${WSB_FLUX_FILE} has too many lines (${NLinesFluxWSB}), GiBUU can read files with a maximum of 210 lines. Please shorten it."
+      exit 1
+    fi
   fi
 fi
 
