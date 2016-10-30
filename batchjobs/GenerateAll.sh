@@ -9,7 +9,7 @@ DOCB=""
 NAMESUFFIX=""
 if [[ "${1}" ]]; then
 
-  if || [[ "${1}" == "--help" ]] || [[ "${1}" == "-?" ]]; then
+  if [[ "${1}" == "--help" ]] || [[ "${1}" == "-?" ]]; then
     echo "[RUNLIKE]: ${0} [--no-collisional-broadening|-B] "
     echo -e "[RUNLIKE]:\t-B: Generate event with collisional broadening off."
     exit 0
