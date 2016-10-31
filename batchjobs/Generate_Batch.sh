@@ -14,6 +14,7 @@ DENSITY_SWITCH="2"
 
 #Overall run options
 USE_OSET_INMED_BROAD=".true."
+FIX_BE=".true."
 N_RUNS="10"
 N_ENSEMBLES="4000"
 N_H_ENSEMBLES=$(python -c "print ${N_ENSEMBLES};")
@@ -100,6 +101,12 @@ while [[ ${#} -gt 0 ]]; do
       echo "[OPT]: Using Woods Saxon density"
       ;;
 
+      -c|--no-const-binding-energy)
+      DENSITY_SWITCH="3"
+      echo "[OPT]: Not re-adjusting for constant binding energy."
+      FIX_BE=".false."
+      ;;
+
       -h|--num-h-in-target)
 
       if [[ ${#} -lt 2 ]]; then
@@ -155,6 +162,7 @@ while [[ ${#} -gt 0 ]]; do
       echo "         -i|--input-job-card </path/to/input/jobcard=${GIBUUTOOLSROOT}/batchjobs/GiBUU_BNLPiProd.job.in>: input jobcard to specialise"
       echo "         -J|--job-name <jobname=gibuu_gen> : The name of this job, used for directory structure"
       echo "         -W|--woods-saxon-density : Use Woods Saxon density, for targets, such as Ar40, that do not have an NPA 554 parameterisation"
+      echo "         -c|--no-const-binding-energy : Do not re-adjust nuclear potential for a constant binding energy. Useful for Deuterium targets."
       echo "         -B|--no-oset-broadening : Do not use collisional broadening of baryonic resonances"
       exit 0
       ;;
@@ -279,7 +287,7 @@ __NU_INTERACTION_TYPE__ ${FLUX_CC_NU_SPEC}\n\
 __FLUX_FILE__ ./flux.txt\n\
 __TARGET_A__ ${TARGET_A}\n\
 __TARGET_Z__ ${TARGET_Z}\n\
-__FIX_BE__ .true.\n\
+__FIX_BE__ ${FIX_BE}\n\
 __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
 __N_TSTEPS__ 150\n\
 __N_RUNS__ ${N_RUNS}\n\
@@ -336,7 +344,7 @@ if [[ "${N_NC_JOBS}" != "0" ]]; then
   __FLUX_FILE__ ./flux.txt\n\
   __TARGET_A__ ${TARGET_A}\n\
   __TARGET_Z__ ${TARGET_Z}\n\
-  __FIX_BE__ .true.\n\
+  __FIX_BE__ ${FIX_BE}\n\
   __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
   __N_TSTEPS__ 150\n\
   __N_RUNS__ ${N_RUNS}\n\
@@ -521,7 +529,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
   __FLUX_FILE__ ./wsb_flux.txt\n\
   __TARGET_A__ ${TARGET_A}\n\
   __TARGET_Z__ ${TARGET_Z}\n\
-  __FIX_BE__ .true.\n\
+  __FIX_BE__ ${FIX_BE}\n\
   __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
   __N_TSTEPS__ 150\n\
   __N_RUNS__ ${N_RUNS}\n\
@@ -578,7 +586,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
     __FLUX_FILE__ ./wsb_flux.txt\n\
     __TARGET_A__ ${TARGET_A}\n\
     __TARGET_Z__ ${TARGET_Z}\n\
-    __FIX_BE__ .true.\n\
+    __FIX_BE__ ${FIX_BE}\n\
     __N_ENSEMBLE__ ${N_ENSEMBLES}\n\
     __N_TSTEPS__ 150\n\
     __N_RUNS__ ${N_RUNS}\n\
