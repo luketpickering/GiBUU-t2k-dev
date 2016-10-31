@@ -384,7 +384,7 @@ if [[ "${N_NC_JOBS}" != "0" ]]; then
   cd ../
 fi # end N_NC_JOBS
 
-if [[ "${N_H_IN_COMPOSITE}" ]]; then
+if [[ "${N_H_IN_COMPOSITE}" != "0" ]]; then
 
   ################################################################################
   ##             Generate: H target CC
@@ -626,7 +626,7 @@ if [[ "${N_CC_JOBS_WSB}" != "0" ]]; then
     cd ../
   fi # end N_NC_JOBS
 
-  if [[ "${N_H_IN_COMPOSITE}" ]]; then
+  if [[ "${N_H_IN_COMPOSITE}" != "0" ]]; then
 
     ################################################################################
     ##             Generate: WSB H target CC
