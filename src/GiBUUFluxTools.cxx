@@ -146,13 +146,12 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
       BinWidths[i] = BinEdgeVals[i].ube - BinEdgeVals[i].lbe;
     } else {  // Only have low bin edges
-      BinWidths[i] =
-          ((i + 1) != BinEdgeVals.size())
-              ? (BinEdgeVals[i + 1].lbe - BinEdgeVals[i].lbe)
-              : (BinEdgeVals[i].lbe -
-                 BinEdgeVals[i - 1].lbe);  // Assume the last bin is
-                                                    // the same width as the
-                                                    // previous bin
+      BinWidths[i] = ((i + 1) != BinEdgeVals.size())
+                         ? (BinEdgeVals[i + 1].lbe - BinEdgeVals[i].lbe)
+                         : (BinEdgeVals[i].lbe -
+                            BinEdgeVals[i - 1].lbe);  // Assume the last bin is
+                                                      // the same width as the
+                                                      // previous bin
     }
     BinCenters[i] = BinEdgeVals[i].lbe + BinWidths[i] / 2.0;
     BinValues[i] = BinEdgeVals[i].v;
@@ -345,6 +344,9 @@ bool HandleArgs(int argc, char const *argv[]) {
       SayRunLike(argv);
       exit(0);
     }
+    std::cout << "[ERROR]: Unexpected argument: " << arg << std::endl;
+    SayRunLike(argv);
+    exit(1);
   }
   if (!Opts::InputFName.length()) {
     std::cout << "[ERROR]: Expected -t or -r argument to specify input file."
@@ -362,6 +364,7 @@ bool HandleArgs(int argc, char const *argv[]) {
         << std::endl;
     return false;
   }
+  return LastArgOkay;
 }
 
 int main(int argc, char const *argv[]) {

@@ -1,11 +1,10 @@
 #include <algorithm>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
-#include <fstream>
-
 
 #include "TFile.h"
 #include "TH1D.h"
@@ -16,10 +15,12 @@
 #include "LUtils/Debugging.hxx"
 #include "LUtils/Utils.hxx"
 
-#include "GiBUUToStdHep_Utils.hxx"
 #include "GiBUUToStdHep_CLIOpts.hxx"
+#include "GiBUUToStdHep_Utils.hxx"
 
 #include "GiRooTracker.hxx"
+
+std::map<int, double> FluxComponentIntegrals;
 
 GiBUUPartBlob GetParticleLine(std::string const &line) {
   GiBUUPartBlob pblob;
@@ -357,6 +358,74 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
   return 0;
 }
 
+int GetPDGFromHistName(std::string const &histname) {
+  if ("numu_flux" == histname) {
+    return 14;
+  } else if ("numub_flux" == histname) {
+    return -14;
+  } else if ("nue_flux" == histname) {
+    return 12;
+  } else if ("nueb_flux" == histname) {
+    return -12;
+  } else {
+    return 0;
+  }
+}
+
+void HandleFluxIntegralLine(std::string const &fln,
+                            std::string const &histname) {
+  int pdgfromhistname = GetPDGFromHistName(histname);
+  if (!pdgfromhistname) {
+    UDBWarn("Failed to parse the correct species from histname:\"" << histname
+                                                                   << "\"");
+    return;
+  }
+  if (FluxComponentIntegrals.count(pdgfromhistname)) {
+    UDBWarn("Already read a flux file for hist: " << histname
+                                                  << ", overwriting.");
+  } else {
+    FluxComponentIntegrals[pdgfromhistname] = 0;
+  }
+
+  if ("# input flux integral:" != fln.substr(0, 22)) {
+    UDBWarn(
+        "Input flux file didn't contain integral comment, the flux species "
+        "associated with \""
+        << histname
+        << "\" will not be correctly normalisable in a multi-species sample.");
+    return;
+  }
+  size_t wi_it = fln.find("(width integral: ");
+
+  if (wi_it == std::string::npos) {
+    UDBWarn(
+        "Input flux file didn't contain integral comment, the flux species "
+        "associated with \""
+        << histname
+        << "\" will not be correctly normalisable in a multi-species sample.");
+    return;
+  }
+
+  size_t end_bracket = fln.find_last_of(")");
+
+  double fci;
+  try {
+    fci = Utils::str2d(fln.substr(wi_it + 17, end_bracket), true);
+  } catch (...) {
+    UDBWarn(
+        "Input flux file width integral comment could not be parsed for the "
+        "flux species "
+        "associated with \""
+        << histname << "\", it will not be correctly normalisable in a "
+                       "multi-species sample.");
+    return;
+  }
+
+  UDBLog("Parsed flux width integral as: " << fci << " from line: " << fln);
+
+  FluxComponentIntegrals[pdgfromhistname] = fci;
+}
+
 void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   std::ifstream ifs(fileloc);
   if (!ifs.good()) {
@@ -369,6 +438,9 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   std::vector<std::pair<double, double> > FluxValues;
   while (std::getline(ifs, line)) {
     if (line[0] == '#') {  // ignore comments
+      if (ln == 0) {
+        HandleFluxIntegralLine(line, histname);
+      }
       ln++;
       continue;
     }
@@ -389,7 +461,7 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
     throw;
   }
 
-  double * BinLowEdges = new double[FluxValues.size() + 1];
+  double *BinLowEdges = new double[FluxValues.size() + 1];
   for (size_t bin_it = 1; bin_it < FluxValues.size(); ++bin_it) {
     BinLowEdges[bin_it] =
         FluxValues[bin_it - 1].first +
@@ -412,6 +484,83 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   fluxHist->Write();
 }
 
+void SetFluxSpeciesWeights() {
+  if (!FluxComponentIntegrals.count(14)) {
+    FluxComponentIntegrals[14] = 0;
+  }
+  if (!FluxComponentIntegrals.count(-14)) {
+    FluxComponentIntegrals[-14] = 0;
+  }
+  if (!FluxComponentIntegrals.count(12)) {
+    FluxComponentIntegrals[12] = 0;
+  }
+  if (!FluxComponentIntegrals.count(-12)) {
+    FluxComponentIntegrals[-12] = 0;
+  }
+
+  if (FluxComponentIntegrals[14]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[14] =
+        FluxComponentIntegrals[14] /
+        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
+         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[14] = 0;
+  }
+  if (FluxComponentIntegrals[-14]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-14] =
+        FluxComponentIntegrals[-14] /
+        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
+         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-14] = 0;
+  }
+  if (FluxComponentIntegrals[14]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[14 + 100] =
+        FluxComponentIntegrals[14] /
+        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[14 + 100] = 0;
+  }
+  if (FluxComponentIntegrals[-14]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-14 + 100] =
+        FluxComponentIntegrals[-14] /
+        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-14 + 100] = 0;
+  }
+
+  if (FluxComponentIntegrals[12]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[12] =
+        FluxComponentIntegrals[12] /
+        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
+         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[12] = 0;
+  }
+  if (FluxComponentIntegrals[-12]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-12] =
+        FluxComponentIntegrals[-12] /
+        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
+         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-12] = 0;
+  }
+  if (FluxComponentIntegrals[12]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[12 + 100] =
+        FluxComponentIntegrals[12] /
+        (FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[12 + 100] = 0;
+  }
+  if (FluxComponentIntegrals[-12]) {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-12 + 100] =
+        FluxComponentIntegrals[-12] /
+        (FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
+  } else {
+    GiBUUToStdHepOpts::CompositeFluxWeight[-12 + 100] = 0;
+  }
+}
+
 int GiBUUToStdHep() {
   TFile *outFile = new TFile(GiBUUToStdHepOpts::OutFName.c_str(), "RECREATE");
   if (!outFile->IsOpen()) {
@@ -424,12 +573,13 @@ int GiBUUToStdHep() {
   giRooTracker->AddBranches(rooTrackerTree, true,
                             GiBUUToStdHepOpts::HaveProdChargeInfo);
 
-  //Handle the fluxes first so that we know the relative normalisations
+  // Handle the fluxes first so that we know the relative normalisations
   for (size_t ff_it = 0; ff_it < GiBUUToStdHepOpts::FluxFilesToAdd.size();
        ++ff_it) {
     SaveFluxFile(GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].second,
                  GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].first);
   }
+  SetFluxSpeciesWeights();
 
   int ParserRtnCode = 0;
   ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
@@ -446,7 +596,6 @@ int GiBUUToStdHep() {
 }
 
 int main(int argc, char const *argv[]) {
-
   if (!GiBUUToStdHep_CLIOpts::HandleArgs(argc, argv)) {
     GiBUUToStdHep_CLIOpts::SayRunLike(argv);
     return 1;

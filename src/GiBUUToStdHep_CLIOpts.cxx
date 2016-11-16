@@ -556,6 +556,9 @@ bool HandleArgs(int const argc, char const *argv[]) {
       }
       continue;
     }
+    std::cout << "[ERROR]: Unexpected argument: " << arg << std::endl;
+    SayRunLike(argv);
+    exit(1);
   }
 
   if (requiredArguments != 15) {
@@ -564,6 +567,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
               << std::endl;
     return false;
   }
+  return LastArgOkay;
 }
 void SayRunLike(char const *argv[]) {
   std::cout
