@@ -19,28 +19,33 @@ endif()
 ##################################  CXX  #################£#####################
 get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
 
+set(HASSCPP11 FALSE)
 # Compiler-specific C++11 activation.
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
     if (NOT (GCC_VERSION VERSION_GREATER 4.8 OR GCC_VERSION VERSION_EQUAL 4.8))
         message(STATUS "[NOTE]: If you are trying to a use a non-system compiler, CMake is too clever for you. You must manually pass \'-DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc)\' when configuring (You should flatten this build directory and start again unless you know how to clear CMake cache variables).")
-        message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.8 or greater (c++11 support).")
+        message(STATUS "Building in C++03 compatibility mode.")
+    else()
+      set(HASSCPP11 TRUE)
     endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(HASSCPP11 TRUE)
 else ()
-    message(FATAL_ERROR "Your C++ compiler does not support C++11.")
+    message(STATUS "Building in C++03 compatibility mode.")
 endif ()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11")
-
-if(${USELINKEDPLUGINS})
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DLINKEDPLUGINS")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DLINKEDPLUGINS")
-
+set(CPPVERSIONFLAGS "")
+if(HASSCPP11)
+  set(CPPVERSIONFLAGS "-std=c++11")
+else()
+  set(CPPVERSIONFLAGS "-DCPP03COMPAT")
 endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 ${CPPVERSIONFLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CPPVERSIONFLAGS}")
 
 message(STATUS "C++ Compiler      : " ${CXX_COMPILER_NAME})
 message(STATUS "    Release flags : " ${CMAKE_CXX_FLAGS_RELEASE})
@@ -70,7 +75,7 @@ endif()
 include(${PROJECT_SOURCE_DIR}/cmake/LUtils.cmake)
 ###########################  GiBUUToStdHep  ####################################
 
-add_executable(GiBUUToStdHep src/GiBUUToStdHep.cxx src/GiBUUToStdHep_Utils.cxx src/GiRooTracker.cxx)
+add_executable(GiBUUToStdHep src/GiBUUToStdHep.cxx src/GiBUUToStdHep_Utils.cxx src/GiBUUToStdHep_CLIOpts.cxx src/GiRooTracker.cxx)
 target_include_directories(GiBUUToStdHep PUBLIC ${CMAKE_INSTALL_PREFIX}/include ${LUTILS_INCLUDE_DIRS} ./)
 set_target_properties(GiBUUToStdHep PROPERTIES COMPILE_FLAGS ${ROOT_CXX_FLAGS})
 add_dependencies(GiBUUToStdHep LUtils)

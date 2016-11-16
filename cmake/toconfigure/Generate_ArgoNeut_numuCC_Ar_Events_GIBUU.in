@@ -48,8 +48,8 @@ fi
 cd ..
 
 echo "[INFO]: Translating to stdhep..."
-if ! GiBUUToStdHep -u 14 -z 18 -a 22 -f Ar_numuCC/FinalEvents.dat 
-  -F flux_numu,BUUInput/neutrino/T2K_ArgoNeut_250kA-numu.dat -R i13 \
+if ! GiBUUToStdHep -u 14 -z 18 -a 40 -f Ar_numuCC/FinalEvents.dat
+  -F flux_numu,BUUInput/neutrino/Minerva_neutrino.dat \
   -o ArgoNeut_Ar_numuCC.stdhep.root; then
   echo "[ERROR]: Failed to translate to stdhep format."
   cd ${OLDPWD}

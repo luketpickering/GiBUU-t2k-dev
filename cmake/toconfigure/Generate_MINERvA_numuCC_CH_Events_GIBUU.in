@@ -67,7 +67,7 @@ cd ..
 echo "[INFO]: Translating to stdhep..."
 if ! GiBUUToStdHep -u 14 -z 6 -a 12 -W 12 -f C_numuCC/FinalEvents.dat \
   -z 1 -a 1 -W 1 -f H_numuCC/FinalEvents.dat \
-  -F flux_numu,BUUInput/neutrino/T2K_MINERvA_250kA-numu.dat -R i13 \
+  -F flux_numu,BUUInput/neutrino/Minerva_neutrino.dat -R i13 \
   -o MINERvA_CH_numuCC.stdhep.root; then
   echo "[ERROR]: Failed to translate to stdhep format."
   cd ${OLDPWD}

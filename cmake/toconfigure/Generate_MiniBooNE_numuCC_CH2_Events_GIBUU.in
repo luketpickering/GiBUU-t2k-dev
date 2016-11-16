@@ -67,8 +67,8 @@ cd ..
 echo "[INFO]: Translating to stdhep..."
 if ! GiBUUToStdHep \
   -u 14 -z 6 -a 12 -W 12 -f C_numuCC/FinalEvents.dat \
-  -z 1 -a 1 -W 1 -f H_numuCC/FinalEvents.dat \
-  -F flux_numu,BUUInput/neutrino/MiniBooNE-flux.dat -R i13 \
+  -z 1 -a 1 -W 2 -f H_numuCC/FinalEvents.dat \
+  -F flux_numu,BUUInput/neutrino/MiniBooNE-flux.dat -R i14 \
   -o MiniBooNE_CH2_numuCC.stdhep.root; then
   echo "[ERROR]: Failed to translate to stdhep format."
   cd ${OLDPWD}

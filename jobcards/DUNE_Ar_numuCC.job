@@ -118,8 +118,8 @@
 ! file code/density/nucleus.f90
 &target
   target_Z=18
-  target_A=22
-  densitySwitch_Static=3          ! 0: density=0.0, 1: Wood-Saxon by Lenske, 2 : NPA 554, 3: Wood-Saxon by Lenske, different neutron and proton radii,
+  target_A=40
+  densitySwitch_Static=3         ! 0: density=0.0, 1: Wood-Saxon by Lenske, 2 : NPA 554, 3: Wood-Saxon by Lenske, different neutron and proton radii,
           ! 5: density distribution is a sphere with density according to the input value of "fermiMomentum_input".
   fermiMomentum_input=0.225       ! Input value of the fermi momentum for densitySwitch_static=5.
   fermiMotion=.true.

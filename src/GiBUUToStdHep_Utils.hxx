@@ -13,6 +13,10 @@
 #include <vector>
 
 #include "Rtypes.h"
+#include "TVector3.h"
+#include "TLorentzVector.h"
+
+#include "GiBUUToStdHep_CLIOpts.hxx"
 
 /// Utilities which may be helpful for processing GiBUU specific output.
 namespace GiBUUUtils {
@@ -126,6 +130,79 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const* const StdHepPDGArray,
                        Long_t const* const HistoryArray, Int_t StdHepN,
                        bool IsCC = true, Int_t StruckNucleonPosition = -1,
                        Int_t PrimaryProdCharge = -10);
+}
+
+template <typename T>
+inline std::string NegSpacer(T const &num) {
+  return (num >= 0) ? " " : "";
+}
+
+inline std::ostream &operator<<(std::ostream &os, TVector3 const &tl) {
+  auto prec = os.precision();
+  auto flags = os.flags();
+  os.precision(2);
+  os.flags(std::ios::scientific);
+  os << " " << NegSpacer(tl[0]) << tl[0] << "," << NegSpacer(tl[1]) << tl[1]
+     << "," << NegSpacer(tl[2]) << tl[2] << ")]";
+  os.precision(prec);
+  os.flags(flags);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os, TLorentzVector const &tlv) {
+  auto prec = os.precision();
+  auto flags = os.flags();
+  os.precision(2);
+  os.flags(std::ios::scientific);
+  os << "[" << NegSpacer(tlv[0]) << tlv[0] << "," << NegSpacer(tlv[1]) << tlv[1]
+     << "," << NegSpacer(tlv[2]) << tlv[2] << "," << NegSpacer(tlv[3]) << tlv[3]
+     << ":M(" << tlv.M() << ")]";
+  os.precision(prec);
+  os.flags(flags);
+  return os;
+}
+
+struct GiBUUPartBlob {
+  GiBUUPartBlob()
+      : Run(0),
+        EvNum(0),
+        ID(0),
+        Charge(0),
+        PerWeight(0),
+        Position(0, 0, 0),
+        FourMom(0, 0, 0, 0),
+        History(0),
+        Prodid(0),
+        Enu(0),
+        ProdCharge(0),
+        ln(0) {}
+  Int_t Run;
+  Int_t EvNum;
+  Int_t ID;
+  Int_t Charge;
+  Double_t PerWeight;
+  TVector3 Position;
+  TLorentzVector FourMom;
+  Long_t History;
+  Int_t Prodid;
+  Double_t Enu;
+  Int_t ProdCharge;
+  Int_t ln;
+};
+
+namespace {
+std::ostream &operator<<(std::ostream &os, GiBUUPartBlob const &part) {
+  os << "{ Run: " << part.Run << ", EvNum: " << part.EvNum
+     << ", ID: " << part.ID << ", Charge: " << part.Charge
+     << ", PerWeight: " << part.PerWeight << ", Pos: " << part.Position
+     << ", 4Mom: " << part.FourMom << ", History: " << part.History
+     << ", Prodid: " << part.Prodid << ", Enu: " << part.Enu;
+  if (GiBUUToStdHepOpts::HaveProdChargeInfo) {
+    os << ", ProdCharge: " << part.ProdCharge;
+  }
+  os << ", LineNumber: " << part.ln;
+  return os << " }";
+}
 }
 
 #endif

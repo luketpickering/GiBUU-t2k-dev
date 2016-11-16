@@ -7,7 +7,7 @@
 #include "TFile.h"
 #include "TH1.h"
 
-#include "LUtils/CLITools.hxx"
+#include "LUtils/Debugging.hxx"
 #include "LUtils/Utils.hxx"
 
 namespace Opts {
@@ -149,110 +149,208 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
   return WriteFile(BinCenters, BinWidths, BinValues, BinEdgeVals.size());
 }
 
-void SetOpts() {
-  CLIArgs::AddOpt("-l", "--low-bin-edge", true,
-                  [&](std::string const &opt) -> bool {
-                    try {
-                      Opts::LowBinEdgeColumn = Utils::str2i(opt, true);
-                    } catch (...) {
-                      return false;
-                    }
+bool Handle_LowBinEdge(std::string const &opt) {
+  try {
+    Opts::LowBinEdgeColumn = Utils::str2i(opt, true);
+  } catch (...) {
+    return false;
+  }
 
-                    std::cout << "\t--Lower bin edge column : "
-                              << Opts::LowBinEdgeColumn << std::endl;
-                    return true;
-                  },
-                  false, []() {}, "<Low bin edge column number>");
+  std::cout << "\t--Lower bin edge column : " << Opts::LowBinEdgeColumn
+            << std::endl;
+  return true;
+}
 
-  CLIArgs::AddOpt("-u", "--upper-bin-edge", true,
-                  [&](std::string const &opt) -> bool {
-                    try {
-                      Opts::UpBinEdgeColumn = Utils::str2i(opt, true);
-                    } catch (...) {
-                      return false;
-                    }
+bool Handle_UpBinEdge(std::string const &opt) {
+  try {
+    Opts::UpBinEdgeColumn = Utils::str2i(opt, true);
+  } catch (...) {
+    return false;
+  }
 
-                    std::cout << "\t--Upper bin edge column : "
-                              << Opts::UpBinEdgeColumn << std::endl;
-                    return true;
+  std::cout << "\t--Upper bin edge column : " << Opts::UpBinEdgeColumn
+            << std::endl;
+  return true;
+}
+bool Handle_ValueBin(std::string const &opt) {
+  try {
+    Opts::ValueColumn = Utils::str2i(opt, true);
+  } catch (...) {
+    return false;
+  }
 
-                  },
-                  false, []() {}, "<Upper bin edge column number>");
+  std::cout << "\t--Value column : " << Opts::ValueColumn << std::endl;
+  return true;
+}
+bool Handle_InputTexFile(std::string const &opt) {
+  Opts::InputFName = opt;
+  Opts::TextInput = true;
+  std::cout << "\t--Reading from text file " << Opts::InputFName << std::endl;
+  return true;
+}
+bool Handle_InputROOTFile(std::string const &opt) {
+  Opts::InputFName = opt;
+  Opts::TextInput = false;
+  std::cout << "\t--Reading from ROOT file " << Opts::InputFName << std::endl;
+  return true;
+}
+bool Handle_InputROOTHistogram(std::string const &opt) {
+  Opts::InputTHName = opt;
+  std::cout << "\t--Reading " << Opts::InputTHName << " from ROOT file."
+            << std::endl;
+  return true;
+}
+bool Handle_OutputFile(std::string const &opt) {
+  Opts::OutputFName = opt;
+  std::cout << "\t--Writing to file " << Opts::OutputFName << std::endl;
+  return true;
+}
+bool Handle_KeepNorm(std::string const &opt) {
+  Opts::DoPDF = false;
+  std::cout << "\t--Keeping original normalisation " << std::endl;
+  return true;
+}
 
-  CLIArgs::AddOpt("-v", "--value", true,
-                  [&](std::string const &opt) -> bool {
-                    try {
-                      Opts::ValueColumn = Utils::str2i(opt, true);
-                    } catch (...) {
-                      return false;
-                    }
+void SayRunLike(char const *argv[]) {
+  std::cout
+      << "[RUNLIKE]: " << argv[0]
+      << " -o <Output file name> [-h] [-l "
+         "<Low bin edge column number>] [-u <Upper bin edge column number>] "
+         "[-v Value column number>] [-t <Input text file name>] [-r <Input "
+         "ROOT file name>] [-H <Input ROOT histogram name>] [-k]"
 
-                    std::cout << "\t--Value column : " << Opts::ValueColumn
-                              << std::endl;
-                    return true;
+      << "\n-----------------------------------\n"
 
-                  },
-                  false, []() {}, "Value column number>");
+      << "\n\t[Arg]: (-h|--help)"
+      << "\n\t[Arg]: (-l|--low-bin-edge) <Low bin edge column number>"
+      << "\n\t[Arg]: (-u|--upper-bin-edge) <Upper bin edge column number>"
+      << "\n\t[Arg]: (-v|--value) Value column number>"
+      << "\n\t[Arg]: (-t|--input-file-text) <Input text file name>"
+      << "\n\t[Arg]: (-r|--input-file-ROOT) <Input ROOT file name>"
+      << "\n\t[Arg]: (-H|--input-ROOT-histogram) <Input ROOT histogram name>"
+      << "\n\t[Arg]: (-o|--output-file) <Output file name> [Required]"
+      << "\n\t[Arg]: (-k|--keep-norm)" << std::endl;
+}
 
-  CLIArgs::AddOpt("-t", "--input-file-text", true,
-                  [&](std::string const &opt) -> bool {
-                    Opts::InputFName = opt;
-                    Opts::TextInput = true;
-                    std::cout << "\t--Reading from text file "
-                              << Opts::InputFName << std::endl;
-                    return true;
-                  },
-                  false, []() {}, "<Input text file name>");
+bool HandleArgs(int argc, char const *argv[]) {
+  size_t requiredArguments = 0;
 
-  CLIArgs::AddOpt("-r", "--input-file-ROOT", true,
-                  [&](std::string const &opt) -> bool {
-                    Opts::InputFName = opt;
-                    Opts::TextInput = false;
-                    std::cout << "\t--Reading from ROOT file "
-                              << Opts::InputFName << std::endl;
-                    return true;
-                  },
-                  false, []() {}, "<Input ROOT file name>");
+  std::vector<std::string> ArgArray;
+  for (int opt_it = 1; opt_it < argc; ++opt_it) {
+    ArgArray.push_back(argv[opt_it]);
+  }
 
-  CLIArgs::AddOpt("-H", "--input-ROOT-histogram", true,
-                  [&](std::string const &opt) -> bool {
-                    Opts::InputTHName = opt;
-                    std::cout << "\t--Reading " << Opts::InputTHName
-                              << " from ROOT file." << std::endl;
-                    return true;
-                  },
-                  false, []() {}, "<Input ROOT histogram name>");
-
-  CLIArgs::AddOpt("-o", "--output-file", true,
-                  [&](std::string const &opt) -> bool {
-                    Opts::OutputFName = opt;
-                    std::cout << "\t--Writing to file " << Opts::OutputFName
-                              << std::endl;
-                    return true;
-                  },
-                  true, []() {}, "<Output file name>");
-
-  CLIArgs::AddOpt("-k", "--keep-norm", false,
-                  [&](std::string const &opt) -> bool {
-                    Opts::DoPDF = false;
-                    std::cout << "\t--Keeping original normalisation "
-                              << std::endl;
-                    return true;
-                  },
-                  false, []() {}, "<Keep original normalisation>");
+  bool LastArgOkay = true;
+  std::string arg, opt;
+  for (size_t opt_it = 0; opt_it < ArgArray.size();) {
+    if (!LastArgOkay) {
+      UDBError("Argument: \"" << arg << (arg.length() ? std::string(" ") + arg
+                                                      : std::string(""))
+                              << "\" was not correctly understood.");
+      return false;
+    }
+    arg = ArgArray[opt_it++];
+    opt = "";
+    if (("-l" == arg) || ("--low-bin-edge" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -l expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_LowBinEdge(opt);
+      continue;
+    }
+    if (("-u" == arg) || ("--upper-bin-edge" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -u expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_UpBinEdge(opt);
+      continue;
+    }
+    if (("-v" == arg) || ("--value" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -v expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_ValueBin(opt);
+      continue;
+    }
+    if (("-t" == arg) || ("--input-file-text" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -t expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_InputTexFile(opt);
+      continue;
+    }
+    if (("-r" == arg) || ("--input-file-ROOT" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -r expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_InputROOTFile(opt);
+      continue;
+    }
+    if (("-H" == arg) || ("--input-ROOT-histogram" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -H expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_InputROOTHistogram(opt);
+      continue;
+    }
+    if (("-o" == arg) || ("--output-file" == arg)) {
+      if(opt_it == ArgArray.size()){
+        UDBError("Parameter -o expected an option.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      opt = ArgArray[opt_it++];
+      LastArgOkay = Handle_OutputFile(opt);
+      continue;
+    }
+    if (("-k" == arg) || ("--keep-norm" == arg)) {
+      LastArgOkay = Handle_KeepNorm(opt);
+      continue;
+    }
+    if (("-?" == arg) ||("-h" == arg) || ("--help" == arg)) {
+      SayRunLike(argv);
+      exit(0);
+    }
+  }
+  if (!Opts::InputFName.length()) {
+    std::cout << "[ERROR]: Expected -t or -r argument to specify input file."
+              << std::endl;
+    return false;
+  }
+  if (!Opts::OutputFName.length()) {
+    std::cout << "[ERROR]: Expected -o argument to specify output file."
+              << std::endl;
+    return false;
+  }
+  if (!Opts::TextInput && !Opts::InputTHName.length()) {
+    std::cout
+        << "[ERROR]: Got -r, but no -H argument to specify ROOT histogram name."
+        << std::endl;
+    return false;
+  }
 }
 
 int main(int argc, char const *argv[]) {
-  try {
-    SetOpts();
-  } catch (std::exception const &e) {
-    std::cerr << "[ERROR]: " << e.what() << std::endl;
-    return 1;
-  }
-
-  CLIArgs::AddArguments(argc, argv);
-  if (!CLIArgs::HandleArgs()) {
-    CLIArgs::SayRunLike();
+  if (!HandleArgs(argc, argv)) {
+    SayRunLike(argv);
     return 1;
   }
 

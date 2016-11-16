@@ -67,6 +67,9 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
   tree->Branch("NumRunsWeight", &NumRunsWeight, "NumRunsWeight/D");
   tree->Branch("FileExtraWeight", &FileExtraWeight, "FileExtraWeight/D");
   tree->Branch("EvtWght", &EvtWght, "EvtWght/D");
+  tree->Branch("SpeciesWght_numu", &SpeciesWght_numu, "SpeciesWght_numu/D");
+  tree->Branch("SpeciesWght_nue", &SpeciesWght_nue, "SpeciesWght_nue/D");
+  tree->Branch("SpeciesWght", &SpeciesWght, "SpeciesWght/D");
 
   if (AddHistory) {
     tree->Branch("GiBHepHistory", GiBHepHistory, "GiBHepHistory[StdHepN]/L");
