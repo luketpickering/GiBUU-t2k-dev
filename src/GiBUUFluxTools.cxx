@@ -29,7 +29,7 @@ int WriteFile(float *BinCenters, float *BinWidths, float *BinValues,
     WidthIntegral += BinWidths[i] * BinValues[i];
   }
 
-  std::ofstream of(Opts::OutputFName);
+  std::ofstream of(Opts::OutputFName.c_str());
   of << "# input flux integral: " << Integral
      << " (width integral: " << WidthIntegral << ")" << std::endl;
   if (!of.good()) {
@@ -89,7 +89,7 @@ struct tfl {
 };
 
 int Text_BinEdgeToBinCenterPDFFlux_Text() {
-  std::ifstream ifs(Opts::InputFName);
+  std::ifstream ifs(Opts::InputFName.c_str());
   if (!ifs.good()) {
     std::cerr << "[ERROR]: File \"" << Opts::InputFName
               << " could not be opened for reading." << std::endl;
