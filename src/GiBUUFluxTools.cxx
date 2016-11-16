@@ -118,14 +118,17 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
                 << "." << std::endl;
       return 2;
     }
+    tfl t;
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
-      BinEdgeVals.push_back(tfl{splitLine[Opts::LowBinEdgeColumn],
-                                splitLine[Opts::UpBinEdgeColumn],
-                                splitLine[Opts::ValueColumn]});
+      t.lbe = splitLine[Opts::LowBinEdgeColumn];
+      t.ube = splitLine[Opts::UpBinEdgeColumn];
+      t.v = splitLine[Opts::ValueColumn];
     } else {  // Only have low bin edges
-      BinEdgeVals.push_back(tfl{splitLine[Opts::LowBinEdgeColumn], 0xdead,
-                                splitLine[Opts::ValueColumn]});
+      t.lbe = splitLine[Opts::LowBinEdgeColumn];
+      t.ube = 0xdead;
+      t.v = splitLine[Opts::ValueColumn];
     }
+    BinEdgeVals.push_back(t);
     ln++;
   }
   ifs.close();
