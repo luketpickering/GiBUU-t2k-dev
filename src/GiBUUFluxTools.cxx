@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <string>
 
 #include "TFile.h"
@@ -82,6 +81,13 @@ int ROOTTH_ToBinCenterPDFFlux_Text() {
   return res;
 }
 
+/// I hate TFL
+struct tfl {
+  float lbe;
+  float ube;
+  float v;
+};
+
 int Text_BinEdgeToBinCenterPDFFlux_Text() {
   std::ifstream ifs(Opts::InputFName);
   if (!ifs.good()) {
@@ -92,7 +98,7 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
   std::string line;
 
   size_t ln = 0;
-  std::vector<std::tuple<float, float, float> > BinEdgeVals;
+  std::vector<tfl> BinEdgeVals;
   while (std::getline(ifs, line)) {
     if (line[0] == '#') {  // ignore comments
       ln++;
@@ -113,13 +119,12 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
       return 2;
     }
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
-      BinEdgeVals.push_back(std::make_tuple(splitLine[Opts::LowBinEdgeColumn],
-                                            splitLine[Opts::UpBinEdgeColumn],
-                                            splitLine[Opts::ValueColumn]));
+      BinEdgeVals.push_back(tfl{splitLine[Opts::LowBinEdgeColumn],
+                                splitLine[Opts::UpBinEdgeColumn],
+                                splitLine[Opts::ValueColumn]});
     } else {  // Only have low bin edges
-      BinEdgeVals.push_back(std::make_tuple(splitLine[Opts::LowBinEdgeColumn],
-                                            0xdeadbeef,
-                                            splitLine[Opts::ValueColumn]));
+      BinEdgeVals.push_back(tfl{splitLine[Opts::LowBinEdgeColumn], 0xdead,
+                                splitLine[Opts::ValueColumn]});
     }
     ln++;
   }
@@ -131,23 +136,23 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
     return 2;
   }
 
-  float * BinCenters = new float[BinEdgeVals.size()];
-  float * BinWidths = new float[BinEdgeVals.size()];
-  float * BinValues = new float[BinEdgeVals.size()];
+  float *BinCenters = new float[BinEdgeVals.size()];
+  float *BinWidths = new float[BinEdgeVals.size()];
+  float *BinValues = new float[BinEdgeVals.size()];
   for (size_t i = 0; i < BinEdgeVals.size(); ++i) {
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
-      BinWidths[i] = std::get<1>(BinEdgeVals[i]) - std::get<0>(BinEdgeVals[i]);
+      BinWidths[i] = BinEdgeVals[i].ube - BinEdgeVals[i].lbe;
     } else {  // Only have low bin edges
       BinWidths[i] =
           ((i + 1) != BinEdgeVals.size())
-              ? (std::get<0>(BinEdgeVals[i + 1]) - std::get<0>(BinEdgeVals[i]))
-              : (std::get<0>(BinEdgeVals[i]) -
-                 std::get<0>(BinEdgeVals[i - 1]));  // Assume the last bin is
+              ? (BinEdgeVals[i + 1].lbe - BinEdgeVals[i].lbe)
+              : (BinEdgeVals[i].lbe -
+                 BinEdgeVals[i - 1].lbe);  // Assume the last bin is
                                                     // the same width as the
                                                     // previous bin
     }
-    BinCenters[i] = std::get<0>(BinEdgeVals[i]) + BinWidths[i] / 2.0;
-    BinValues[i] = std::get<2>(BinEdgeVals[i]);
+    BinCenters[i] = BinEdgeVals[i].lbe + BinWidths[i] / 2.0;
+    BinValues[i] = BinEdgeVals[i].v;
   }
 
   bool res = WriteFile(BinCenters, BinWidths, BinValues, BinEdgeVals.size());
