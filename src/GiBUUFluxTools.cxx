@@ -21,9 +21,8 @@ bool DoPDF = true;
 std::string InputTHName = "";
 }
 
-int WriteFile(std::unique_ptr<float[]> &BinCenters,
-              std::unique_ptr<float[]> &BinWidths,
-              std::unique_ptr<float[]> &BinValues, size_t NBins) {
+int WriteFile(float *BinCenters, float *BinWidths, float *BinValues,
+              size_t NBins) {
   float Integral = 0;
   float WidthIntegral = 0;
   for (size_t i = 0; Opts::DoPDF && (i < NBins); ++i) {
@@ -63,9 +62,9 @@ int ROOTTH_ToBinCenterPDFFlux_Text() {
     return 2;
   }
 
-  std::unique_ptr<float[]> BinCenters(new float[inph->GetXaxis()->GetNbins()]);
-  std::unique_ptr<float[]> BinWidths(new float[inph->GetXaxis()->GetNbins()]);
-  std::unique_ptr<float[]> BinValues(new float[inph->GetXaxis()->GetNbins()]);
+  float *BinCenters = new float[inph->GetXaxis()->GetNbins()];
+  float *BinWidths = new float[inph->GetXaxis()->GetNbins()];
+  float *BinValues = new float[inph->GetXaxis()->GetNbins()];
   for (Int_t i = 0; i < inph->GetXaxis()->GetNbins(); ++i) {
     BinCenters[i] = inph->GetXaxis()->GetBinCenter(i + 1);
     BinWidths[i] = (inph->GetXaxis()->GetBinLowEdge(i + 2) -
@@ -75,8 +74,12 @@ int ROOTTH_ToBinCenterPDFFlux_Text() {
               << ", width: " << BinWidths[i] << ", value: " << BinValues[i]
               << std::endl;
   }
-  return WriteFile(BinCenters, BinWidths, BinValues,
-                   inph->GetXaxis()->GetNbins());
+  bool res =
+      WriteFile(BinCenters, BinWidths, BinValues, inph->GetXaxis()->GetNbins());
+  delete BinCenters;
+  delete BinWidths;
+  delete BinValues;
+  return res;
 }
 
 int Text_BinEdgeToBinCenterPDFFlux_Text() {
@@ -128,9 +131,9 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
     return 2;
   }
 
-  std::unique_ptr<float[]> BinCenters(new float[BinEdgeVals.size()]);
-  std::unique_ptr<float[]> BinWidths(new float[BinEdgeVals.size()]);
-  std::unique_ptr<float[]> BinValues(new float[BinEdgeVals.size()]);
+  float * BinCenters = new float[BinEdgeVals.size()];
+  float * BinWidths = new float[BinEdgeVals.size()];
+  float * BinValues = new float[BinEdgeVals.size()];
   for (size_t i = 0; i < BinEdgeVals.size(); ++i) {
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
       BinWidths[i] = std::get<1>(BinEdgeVals[i]) - std::get<0>(BinEdgeVals[i]);
@@ -146,7 +149,12 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
     BinCenters[i] = std::get<0>(BinEdgeVals[i]) + BinWidths[i] / 2.0;
     BinValues[i] = std::get<2>(BinEdgeVals[i]);
   }
-  return WriteFile(BinCenters, BinWidths, BinValues, BinEdgeVals.size());
+
+  bool res = WriteFile(BinCenters, BinWidths, BinValues, BinEdgeVals.size());
+  delete BinCenters;
+  delete BinWidths;
+  delete BinValues;
+  return res;
 }
 
 bool Handle_LowBinEdge(std::string const &opt) {
@@ -252,7 +260,7 @@ bool HandleArgs(int argc, char const *argv[]) {
     arg = ArgArray[opt_it++];
     opt = "";
     if (("-l" == arg) || ("--low-bin-edge" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -l expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -262,7 +270,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       continue;
     }
     if (("-u" == arg) || ("--upper-bin-edge" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -u expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -272,7 +280,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       continue;
     }
     if (("-v" == arg) || ("--value" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -v expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -282,7 +290,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       continue;
     }
     if (("-t" == arg) || ("--input-file-text" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -t expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -292,7 +300,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       continue;
     }
     if (("-r" == arg) || ("--input-file-ROOT" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -r expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -302,7 +310,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       continue;
     }
     if (("-H" == arg) || ("--input-ROOT-histogram" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -H expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -312,7 +320,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       continue;
     }
     if (("-o" == arg) || ("--output-file" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -o expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -325,7 +333,7 @@ bool HandleArgs(int argc, char const *argv[]) {
       LastArgOkay = Handle_KeepNorm(opt);
       continue;
     }
-    if (("-?" == arg) ||("-h" == arg) || ("--help" == arg)) {
+    if (("-?" == arg) || ("-h" == arg) || ("--help" == arg)) {
       SayRunLike(argv);
       exit(0);
     }

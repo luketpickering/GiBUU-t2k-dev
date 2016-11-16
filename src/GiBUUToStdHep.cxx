@@ -389,7 +389,7 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
     throw;
   }
 
-  std::unique_ptr<double[]> BinLowEdges(new double[FluxValues.size() + 1]);
+  double * BinLowEdges = new double[FluxValues.size() + 1];
   for (size_t bin_it = 1; bin_it < FluxValues.size(); ++bin_it) {
     BinLowEdges[bin_it] =
         FluxValues[bin_it - 1].first +
@@ -402,7 +402,8 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
 
   TH1D *fluxHist = new TH1D(
       histname.c_str(), (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.)").c_str(),
-      FluxValues.size(), BinLowEdges.get());
+      FluxValues.size(), BinLowEdges);
+  delete BinLowEdges;
 
   for (Int_t bin_it = 1; bin_it < fluxHist->GetNbinsX() + 1; bin_it++) {
     fluxHist->SetBinContent(bin_it, FluxValues[bin_it - 1].second);
@@ -423,16 +424,17 @@ int GiBUUToStdHep() {
   giRooTracker->AddBranches(rooTrackerTree, true,
                             GiBUUToStdHepOpts::HaveProdChargeInfo);
 
-  int ParserRtnCode = 0;
-  ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
-
-  rooTrackerTree->Write();
-
+  //Handle the fluxes first so that we know the relative normalisations
   for (size_t ff_it = 0; ff_it < GiBUUToStdHepOpts::FluxFilesToAdd.size();
        ++ff_it) {
     SaveFluxFile(GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].second,
                  GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].first);
   }
+
+  int ParserRtnCode = 0;
+  ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
+
+  rooTrackerTree->Write();
 
   outFile->Write();
   outFile->Close();
