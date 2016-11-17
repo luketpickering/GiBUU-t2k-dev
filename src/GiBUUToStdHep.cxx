@@ -136,6 +136,10 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     ifs.close();  // Read all the lines.
     UDBLog("Found " << FileEvents.size() << " events in " << fname << ".");
 
+    if(!FileEvents.size()){
+      continue;
+    }
+
     double NRunsScaleFactor =
         GiBUUToStdHepOpts::NFilesAddedWeights[fileNumber] /
         double(FileEvents.back().back().Run);

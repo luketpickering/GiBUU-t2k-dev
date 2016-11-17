@@ -4,7 +4,8 @@
 #include "TLorentzVector.h"
 #include "TTree.h"
 
-void Select_CC1pip(char const *InpFileName, char const *OupFileName) {
+void Select_CC1pip(char const *InpFileName, char const *OupFileName,
+                   bool db = false) {
   TFile *inpF = new TFile(InpFileName);
 
   if (!inpF || !inpF->IsOpen()) {
@@ -35,11 +36,10 @@ void Select_CC1pip(char const *InpFileName, char const *OupFileName) {
   stdhep->SetBranchAddress("StdHepStatus", GiStdHepStatus);
 
   TFile *oupF = new TFile(OupFileName, "RECREATE");
-  TTree *oupT = new TTree("CC1PipQ2","");
+  TTree *oupT = new TTree("CC1PipQ2", "");
   Float_t Q2;
-  oupT->Branch("Q2",&Q2);
-  oupT->Branch("EvtWght",&EvtWght);
-
+  oupT->Branch("Q2", &Q2);
+  oupT->Branch("EvtWght", &EvtWght);
 
   Long64_t nentries = stdhep->GetEntries();
   for (Long64_t evt = 0; evt < nentries; ++evt) {
@@ -51,32 +51,57 @@ void Select_CC1pip(char const *InpFileName, char const *OupFileName) {
     Int_t NPiPlus = 0;
     Int_t NOtherPi = 0;
 
+    if (db) {
+      std::cout << "Ev[" << evt << "] ------- " << std::endl;
+    }
+
     // Loop through particle stack
     for (Int_t prt = 0; prt < GiStdHepN; ++prt) {
-      //Inital numu
+      // Inital numu
       if ((GiStdHepStatus[prt] == 0) && (GiStdHepPdg[prt] == 14)) {
         pnu = TLorentzVector(GiStdHepP4[prt][0], GiStdHepP4[prt][1],
                              GiStdHepP4[prt][2], GiStdHepP4[prt][3]);
+        if (db) {
+          std::cout << "\tFound nu at " << prt << " Mom: ("
+                    << GiStdHepP4[prt][0] << ", " << GiStdHepP4[prt][1] << ", "
+                    << GiStdHepP4[prt][2] << ", " << GiStdHepP4[prt][3] << ") "
+                    << std::endl;
+        }
       }
-      //Final mu
+      // Final mu
       if ((GiStdHepStatus[prt] == 1) && (GiStdHepPdg[prt] == 13)) {
         pmu = TLorentzVector(GiStdHepP4[prt][0], GiStdHepP4[prt][1],
                              GiStdHepP4[prt][2], GiStdHepP4[prt][3]);
+        if (db) {
+          std::cout << "\tFound mu at " << prt << " Mom: ("
+                    << GiStdHepP4[prt][0] << ", " << GiStdHepP4[prt][1] << ", "
+                    << GiStdHepP4[prt][2] << ", " << GiStdHepP4[prt][3] << ") "
+                    << std::endl;
+        }
       }
-      //Final pi+
+      // Final pi+
       if ((GiStdHepStatus[prt] == 1) && (GiStdHepPdg[prt] == 211)) {
         NPiPlus++;
       }
-      //Final other pi
+      // Final other pi
       if ((GiStdHepStatus[prt] == 1) &&
           ((GiStdHepPdg[prt] == 111) || (GiStdHepPdg[prt] == -211))) {
         NOtherPi++;
       }
     }
-    //cc1pip selection
-    if((NPiPlus == 1) && (NOtherPi == 0) && (pnu.Vect().Mag2() > 0)&& (pmu.Vect().Mag2() > 0)){
-      Q2 = -1.*(pnu - pmu).Mag2();
+    // cc1pip selection
+    if ((NPiPlus == 1) && (NOtherPi == 0) && (pnu.Vect().Mag2() > 0) &&
+        (pmu.Vect().Mag2() > 0)) {
+      Q2 = -1. * (pnu - pmu).Mag2();
+      if (db) {
+        std::cout << "Ev[" << evt << "] -- Q2: " << Q2
+                  << ", pnu.Mag(): " << pnu.Vect().Mag()
+                  << ", pmu.Mag(): " << pmu.Vect().Mag() << std::endl;
+      }
       oupT->Fill();
+    }
+    if (db) {
+      std::cout << "====================" << std::endl;
     }
   }
   oupT->Write();

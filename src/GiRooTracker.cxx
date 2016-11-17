@@ -42,6 +42,10 @@ void GiRooTracker::Reset() {
   StdHepN = 0;
   GiBUUPerWeight = 1.0;
 
+  SpeciesWght_numu = 0.0;
+  SpeciesWght_nue = 0.0;
+  SpeciesWght = 0.0;
+
   Utils::ClearPointer(StdHepPdg, kGiStdHepNPmax);
   Utils::ClearPointer(StdHepStatus, kGiStdHepNPmax);
   Utils::ClearPointer(GiBHepHistory, kGiStdHepNPmax);

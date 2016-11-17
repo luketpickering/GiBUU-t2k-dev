@@ -16,4 +16,10 @@ if [[ "${FOUND}" ]]; then
   cp @CMAKE_INSTALL_PREFIX@/compdata/MiniBooNE_1DQ2_numu_CC1pip.dat .
 fi
 
-root -l -b -q "Select_CC1pip.C(\"${1}\",\"${OUPFNAME}\")"
+if [[ "${2}" ]]; then
+  DB=", true"
+else
+  DB=""
+fi
+
+root -l -b -q "Select_CC1pip.C(\"${1}\",\"${OUPFNAME}\"${DB})"

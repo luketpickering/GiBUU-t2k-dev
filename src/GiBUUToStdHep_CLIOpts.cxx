@@ -550,7 +550,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       opt = ArgArray[opt_it++];
       LastArgOkay = Handle_CLIInputFile(opt);
       if (LastArgOkay) {
-        ArgArray.insert(ArgArray.begin() + (opt_it - 1), CLIFileArgs.begin(),
+        ArgArray.insert(ArgArray.begin() + opt_it, CLIFileArgs.begin(),
                         CLIFileArgs.end());
         CLIFileArgs.clear();
       }
