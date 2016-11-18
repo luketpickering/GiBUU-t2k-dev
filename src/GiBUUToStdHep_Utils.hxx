@@ -41,10 +41,10 @@ namespace GiBUUUtils {
 /// - 11 : G17(2190) PDGs : n/a
 /// - 12 : P11(1710) PDGs : 212212, 212112
 /// - 13 : P11(2100) PDGs : n/a
-/// - 14 : P13(1720 PDGs : 212214, 212114
-/// - 15: P13(1900) PDGs : n/a
-/// - 16: F15(1680) PDGs : 202216, 202116
-/// - 17: F15(2000) PDGs : n/a
+/// - 14 : P13(1720) PDGs : 212214, 212114
+/// - 15 : P13(1900) PDGs : n/a
+/// - 16 : F15(1680) PDGs : 202216, 202116
+/// - 17 : F15(2000) PDGs : n/a
 /// - 18 : F17(1990) PDGs : n/a
 /// - 19 : S31(1620) PDGs : 112222, 112212, 112112, 111112
 /// - 20 : S31(1900) PDGs : n/a
@@ -56,22 +56,48 @@ namespace GiBUUUtils {
 /// - 26 : P31(1910) PDGs : 222222, 222212, 222112, 221112
 /// - 27 : P33(1600) PDGs : 202224, 202214, 202114, 201114
 /// - 28 : P33(1920) PDGs : 222224, 222214, 222114, 221114
-/// - 19 : F35(1750) PDGs : n/a
+/// - 29 : F35(1750) PDGs : n/a
 /// - 30 : F35(1905) PDGs : 212226, 212216, 212116, 211116
 /// - 31 : F35(1950) PDGs : 202228, 202218, 202118, 201118
 /// - 32 : Lambda PDG: 3122
 /// - 33 : Sigma PDGs : 3222, 3212, 3112
 /// - 34 : Sigma(1385) PDGs : 3224, 3214, 3114
-/// - 36 : Lambda (1520) PDG : 102134
+/// - 35 : Lambda(1405) PDGs : 102132
+/// - 36 : Lambda(1520) PDG : 102134
+/// - 37 : Lambda(1600) PDG : 203122
+/// - 38 : Lambda(1670) PDG : 103122
+/// - 39 : Lambda(1690) PDG : 103124
+/// - 40 : Lambda(1810) PDG : 213122
+/// - 41 : Lambda(1820) PDG : 203126
+/// - 42 : Lambda(1830) PDG : 103126
+/// - 43 : Sigma(1670) PDGs : 103224, 103214, 103114
+/// - 44 : Sigma(1775) PDGs : 103226, 103216, 103116
+/// - 45 : Sigma(2030) PDGs : 203228, 203218, 203118
+/// - 46 : Lambda(1800) PDG : 123122
+/// - 47 : Lambda(1890) PDG : 213124
+/// - 48 : Lambda(2100) PDG : n/a
+/// - 49 : Lambda(2110) PDG : n/a
+/// - 50 : Sigma(1660) PDGs : 203222, 203212, 203112
+/// - 51 : Sigma(1750) PDGs : 113222, 113212, 113112
+/// - 52 : Sigma(1915) PDGs : 203226, 203216, 203116
 /// - 53 : Xi PDG: 3322, 3312
+/// - 54 : Xi^Star PDG: 3324, 3314
+/// - 55 : Omega PDG: 3334
 /// - 56 : Lambda_c PDG: 4122
 /// - 57 : Sigma_c PDG: 4222, 4212, 4112
+/// - 58 : Sigma_c^star PDG: 4224, 4214, 4114
+/// - 59 : Xi_c PDG: 4232, 4132
+/// - 60 : Xi_c^star PDG: 4324, 4314
+/// - 61 : Omega_c PDG: 4332
 /// - 101 : pi+=211, pi0=111, pi-=-211
-/// - 101 : eta=221
+/// - 102 : eta=221
 /// - 103 : rho+=213, rho0=113, rho-=-213
 /// - 104 : sigma=9000221
 /// - 105 : omega=223
 /// - 106 : eta prime=331
+/// - 107 : phi=333
+/// - 108 : eta_c=441
+/// - 109 : j_psi=443
 /// - 110 : K+=321, K0=311
 /// - 111 : K-=-321, K0=-311
 /// - 112 : K*-=323, K*0=313
@@ -80,6 +106,11 @@ namespace GiBUUUtils {
 /// - 115 : D bar PDGs : -411, -421
 /// - 116 : D star PDGs : 413, 423
 /// - 117 : D bar star PDGs : -413, -423
+/// - 118 : D_s^plus PDGs : 431
+/// - 119 : D_s_minus PDGs : -431
+/// - 120 : D^star_s^plus PDGs : 433
+/// - 121 : D^star_s^minus PDGs : -433
+/// - 122 : f2(1270) PDGs : 225
 /// - 901 : 11
 /// - 902 : 13
 /// - 911 : 12
@@ -91,8 +122,11 @@ namespace GiBUUUtils {
 /// - 999 : 22
 int GiBUUToPDG(int GiBUUCode, int GiBUUCharge = 0);
 
+#ifndef CPP03COMPAT
 std::tuple<Int_t, Int_t, Int_t> DecomposeGiBUUHistory(Long_t HistCode);
 std::string WriteGiBUUHistory(Long_t HistCode);
+#endif
+
 ///\brief Converts a GiBUU interaction code to the corresponding NEUT code
 /// where possible.
 ///

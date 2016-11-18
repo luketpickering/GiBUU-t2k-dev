@@ -10,6 +10,8 @@ namespace GiBUUUtils {
 
 int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
   // https://gibuu.hepforge.org/trac/wiki/ParticleIDs
+
+  // Baryons
   switch (GiBUUCode) {
     case 1: {
       return (GiBUUCharge > 0) ? 2212 : 2112;
@@ -57,9 +59,6 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     }
     case 14: {
       return (GiBUUCharge > 0) ? 212214 : 212114;
-    }
-    case 15: {
-      return 0;
     }
     case 16: {
       return (GiBUUCharge > 0) ? 202216 : 202116;
@@ -219,11 +218,80 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       }
       return 3214;
     }
+    case 35: {
+      return 102134;
+    }
     case 36: {
       return 102134;
     }
+    case 37: {
+      return 203122;
+    }
+    case 38: {
+      return 103122;
+    }
+    case 39: {
+      return 103124;
+    }
+    case 40: {
+      return 213122;
+    }
+    case 41: {
+      return 203126;
+    }
+    case 42: {
+      return 103126;
+    }
+    case 43: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 103224 : 103114;
+      }
+      return 103214;
+    }
+    case 44: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 103226 : 103116;
+      }
+      return 103216;
+    }
+    case 45: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 203228 : 203118;
+      }
+      return 203218;
+    }
+    case 46: {
+      return 123122;
+    }
+    case 47: {
+      return 213124;
+    }
+    case 50: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 203222 : 203112;
+      }
+      return 203212;
+    }
+    case 51: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 113222 : 113112;
+      }
+      return 113212;
+    }
+    case 52: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 203226 : 203116;
+      }
+      return 203216;
+    }
     case 53: {
       return (GiBUUCharge > 0) ? 3322 : 3312;
+    }
+    case 54: {
+      return (GiBUUCharge > 0) ? 3324 : 3314;
+    }
+    case 55: {
+      return 3334;
     }
     case 56: {
       return 4122;
@@ -234,6 +302,23 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       }
       return 4212;
     }
+    case 58: {
+      if (GiBUUCharge) {
+        return (GiBUUCharge > 0) ? 4224 : 4114;
+      }
+      return 4214;
+    }
+    case 59: {
+      return (GiBUUCharge > 0) ? 4232 : 4132;
+    }
+    case 60: {
+      return (GiBUUCharge > 0) ? 4324 : 4314;
+    }
+    case 61: {
+      return 3334;
+    }
+
+    /// Mesons
     case 101: {
       if (GiBUUCharge) {
         return (GiBUUCharge > 0) ? 211 : -211;
@@ -258,6 +343,15 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 106: {
       return 331;
     }
+    case 107: {
+      return 333;
+    }
+    case 108: {
+      return 441;
+    }
+    case 109: {
+      return 443;
+    }
     case 110: {
       return (GiBUUCharge) ? 321 : 311;
     }
@@ -281,6 +375,21 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     }
     case 117: {
       return (GiBUUCharge) ? -413 : -423;
+    }
+    case 118: {
+      return 431;
+    }
+    case 119: {
+      return -431;
+    }
+    case 120: {
+      return 433;
+    }
+    case 121: {
+      return -433;
+    }
+    case 122: {
+      return 225;
     }
     case 901: {
       return (GiBUUCharge < 0) ? 11 : -11;
@@ -313,6 +422,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 9:   // D13(2080)
     case 11:  // G17(2190)
     case 13:  // P11(2100)
+    case 15:  // P13(1720)
     case 17:  // F15(2000)
     case 18:  // F17(1990)
     case 20:  // S31(1900)
@@ -321,6 +431,8 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 24:  // D35(2350)
     case 25:  // P31(1750
     case 29:  // F35(1750)
+    case 48:  // Lambda(2100)
+    case 49:  // Lambda(2110)
     {         // No PDG for these particles
       return -1;
     }
@@ -546,6 +658,8 @@ int PDGToGiBUU(int PDG) {
     }
   }
 }
+
+#ifndef CPP03COMPAT
 
 std::tuple<Int_t, Int_t, Int_t> DecomposeGiBUUHistory(Long_t HistCode) {
   if (HistCode > -1) {
@@ -881,6 +995,7 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
                                    "\t+"));
   return (NucleonPDG == 2212) ? 11 : 12;
 }
+#endif
 
 int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
                        Long_t const *const HistoryArray, Int_t StdHepN,
@@ -903,9 +1018,13 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     }          // QE
     case 2: {  // delta
       if (PrimaryProdCharge == -10) {
+#ifndef CPP03COMPAT
         return (IsNu ? 1 : -1) *
                (ResonanceHeuristics(StdHepPDGArray, HistoryArray, StdHepN) +
                 ((!IsCC) * 20));
+#else
+        return (IsNu ? 1 : -1) * (11 + ((!IsCC) * 20));
+#endif
       }
 
       if (IsCC) {
