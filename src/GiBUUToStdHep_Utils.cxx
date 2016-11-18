@@ -437,6 +437,15 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
       return -1;
     }
 
+    case 201:
+    case 202:
+    case 232:
+    case 233:
+    case 234:
+    { // Undocumented particle codes observed in GiBUU 2016
+      return -1;
+    }
+
     default: {
       if (GiBUUCode) {
         UDBWarn("Missed a GiBUU PDG Code: " << GiBUUCode);
