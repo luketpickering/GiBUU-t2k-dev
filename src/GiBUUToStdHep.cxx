@@ -416,7 +416,7 @@ void HandleFluxIntegralLine(std::string const &fln,
   size_t end_bracket = fln.find_last_of(")");
 
   double fci;
-  std::string IntegString = fln.substr(wi_it + 17, end_bracket);
+  std::string IntegString = fln.substr(wi_it + 17, (end_bracket-1));
   try {
     fci = Utils::str2d(IntegString, true);
   } catch (std::exception const &e) {
