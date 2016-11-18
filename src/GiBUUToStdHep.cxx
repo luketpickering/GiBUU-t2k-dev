@@ -136,7 +136,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     ifs.close();  // Read all the lines.
     UDBLog("Found " << FileEvents.size() << " events in " << fname << ".");
 
-    if(!FileEvents.size()){
+    if (!FileEvents.size()) {
       continue;
     }
 
@@ -397,6 +397,8 @@ void HandleFluxIntegralLine(std::string const &fln,
         "associated with \""
         << histname
         << "\" will not be correctly normalisable in a multi-species sample.");
+    UDBWarn("From flux line: " << fln);
+
     return;
   }
   size_t wi_it = fln.find("(width integral: ");
@@ -407,21 +409,25 @@ void HandleFluxIntegralLine(std::string const &fln,
         "associated with \""
         << histname
         << "\" will not be correctly normalisable in a multi-species sample.");
+    UDBWarn("From flux line: " << fln);
     return;
   }
 
   size_t end_bracket = fln.find_last_of(")");
 
   double fci;
+  std::string IntegString = fln.substr(wi_it + 17, end_bracket);
   try {
-    fci = Utils::str2d(fln.substr(wi_it + 17, end_bracket), true);
-  } catch (...) {
-    UDBWarn(
-        "Input flux file width integral comment could not be parsed for the "
-        "flux species "
-        "associated with \""
-        << histname << "\", it will not be correctly normalisable in a "
-                       "multi-species sample.");
+    fci = Utils::str2d(IntegString, true);
+  } catch (std::exception const &e) {
+    UDBWarn("Input flux file width integral comment ("
+            << IntegString << ") could not be parsed for the "
+                              "flux species "
+                              "associated with \""
+            << histname << "\", it will not be correctly normalisable in a "
+                           "multi-species sample.");
+    UDBWarn("From flux line: " << fln);
+    UDBWarn("Parsing exception: " << e.what());
     return;
   }
 
