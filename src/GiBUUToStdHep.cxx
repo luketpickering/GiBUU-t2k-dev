@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include "TFile.h"
@@ -89,7 +90,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
   for (size_t fname_it = 0; fname_it < GiBUUToStdHepOpts::InpFNames.size();
        ++fname_it) {
     std::string const &fname = GiBUUToStdHepOpts::InpFNames[fname_it];
-    std::ifstream ifs(fname);
+    std::ifstream ifs(fname.c_str());
 
     if (!ifs.good()) {
       UDBError("Failed to open " << fname << " for reading.");
@@ -248,6 +249,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
                               [GiRooTracker::kStdHepIdxE] = part.FourMom.E();
 
         giRooTracker->GiBHepHistory[giRooTracker->StdHepN] = part.History;
+#ifndef CPP03COMPAT
         auto const &hDec = GiBUUUtils::DecomposeGiBUUHistory(part.History);
         giRooTracker->GiBHepGeneration[giRooTracker->StdHepN] =
             std::get<0>(hDec);
@@ -262,6 +264,8 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
           giRooTracker->GiBHepFather[giRooTracker->StdHepN] =
               GiBUUUtils::GiBUUToPDG(std::get<2>(hDec));
         }
+#endif
+
         giRooTracker->StdHepN++;
         if (giRooTracker->StdHepN == GiRooTracker::kGiStdHepNPmax) {
           UDBWarn("In file " << fname << ", event " << EvNum
@@ -280,7 +284,10 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       try {
         giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
             giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
-            giRooTracker->GiBHepHistory, giRooTracker->StdHepN, FileIsCC,
+#ifndef CPP03COMPAT
+            giRooTracker->GiBHepHistory,
+#endif
+            giRooTracker->StdHepN, FileIsCC,
             (GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : -1,
             GiBUUToStdHepOpts::HaveProdChargeInfo
                 ? giRooTracker->GiBUUPrimaryParticleCharge
@@ -338,10 +345,15 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
                                                  [GiRooTracker::kStdHepIdxPz],
                            giRooTracker->StdHepP4[stdHepInd]
                                                  [GiRooTracker::kStdHepIdxE])
-                    << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")");
+#ifndef CPP03COMPAT
+                    << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")"
+#endif
 
+              );
+#ifndef CPP03COMPAT
           UDBVerbose("\t\t" << GiBUUUtils::WriteGiBUUHistory(
                          giRooTracker->GiBHepHistory[stdHepInd]));
+#endif
         }
         UDBVerbose("\t[Lep Out]: "
                    << TLorentzVector(
@@ -437,7 +449,7 @@ void HandleFluxIntegralLine(std::string const &fln,
 }
 
 void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
-  std::ifstream ifs(fileloc);
+  std::ifstream ifs(fileloc.c_str());
   if (!ifs.good()) {
     UDBError("File \"" << fileloc << " could not be opened for reading.");
     return;

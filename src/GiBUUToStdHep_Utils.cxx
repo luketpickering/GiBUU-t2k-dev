@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <exception>
 #include <iomanip>
+#include <stdexcept>
 
 #include "LUtils/Debugging.hxx"
 
@@ -441,8 +442,7 @@ int GiBUUToPDG(int GiBUUCode, int GiBUUCharge) {
     case 202:
     case 232:
     case 233:
-    case 234:
-    { // Undocumented particle codes observed in GiBUU 2016
+    case 234: {  // Undocumented particle codes observed in GiBUU 2016
       return -1;
     }
 
@@ -732,6 +732,7 @@ std::string WriteGiBUUHistory(Long_t HistCode) {
   return ss.str();
 }
 
+#ifndef CPP03COMPAT
 std::string PrintGiBUUStdHepArray(Int_t GiBUUCode,
                                   Int_t const *const StdHepPDGArray,
                                   Long_t const *const HistoryArray,
@@ -745,6 +746,7 @@ std::string PrintGiBUUStdHepArray(Int_t GiBUUCode,
   }
   return ss.str();
 }
+#endif
 
 // Returns vect of: Particle PDG, Parent1, Parent2
 std::vector<std::tuple<Int_t, Int_t, Int_t> > GetGenNParticles(
@@ -1007,8 +1009,10 @@ int ResonanceHeuristics(Int_t const *const StdHepPDGArray,
 #endif
 
 int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
-                       Long_t const *const HistoryArray, Int_t StdHepN,
-                       bool IsCC, Int_t StruckNucleonPosition,
+#ifndef CPP03COMPAT
+                       Long_t const *const HistoryArray,
+#endif
+                       Int_t StdHepN, bool IsCC, Int_t StruckNucleonPosition,
                        Int_t PrimaryProdCharge) {
   // 1=QE, 2-31=res ID, 32,33=1pi, 34=DIS, 35,36=2p2h, 37=2pi
   // From https://gibuu.hepforge.org/trac/wiki/LesHouches
@@ -1144,11 +1148,13 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     default: {}
   }
 
+#ifndef CPP03COMPAT
   UDBWarn(
       "Couldn't determine NEUT equivalent reaction code "
       "for the interaction:"
       << PrintGiBUUStdHepArray(GiBUUCode, StdHepPDGArray, HistoryArray,
                                StdHepN));
+#endif
   return 0;
 }
 }

@@ -354,7 +354,7 @@ bool Handle_NoProdCharge(std::string const &opt) {
 }
 
 bool Handle_SaveFluxFile(std::string const &opt) {
-  auto const &split = Utils::SplitStringByDelim(opt, ",");
+  std::vector<std::string> const &split = Utils::SplitStringByDelim(opt, ",");
   if (split.size() != 2) {
     UDBLog(
         "[ERROR]: Expected -F argument to look like "
@@ -370,7 +370,7 @@ bool Handle_SaveFluxFile(std::string const &opt) {
 }
 
 bool Handle_CLIInputFile(std::string const &opt) {
-  std::ifstream ifs(opt);
+  std::ifstream ifs(opt.c_str());
 
   if (!ifs.good()) {
     std::cerr << "Failed to open " << opt << " for reading CLI args from."

@@ -5,33 +5,24 @@
 GiRooTracker::GiRooTracker() {
   StdHepPdg = new Int_t[kGiStdHepNPmax];
   StdHepStatus = new Int_t[kGiStdHepNPmax];
+#ifndef CPP03COMPAT
   GiBHepHistory = new Long_t[kGiStdHepNPmax];
   GiBHepFather = new Int_t[kGiStdHepNPmax];
   GiBHepMother = new Int_t[kGiStdHepNPmax];
   GiBHepGeneration = new Int_t[kGiStdHepNPmax];
-
+#endif
   Reset();
 }
 
 GiRooTracker::~GiRooTracker() {
-  if (StdHepPdg != nullptr) {
-    delete StdHepPdg;
-  };
-  if (StdHepPdg != nullptr) {
-    delete GiBHepHistory;
-  };
-  if (StdHepStatus != nullptr) {
-    delete StdHepStatus;
-  };
-  if (GiBHepFather != nullptr) {
-    delete GiBHepFather;
-  };
-  if (GiBHepMother != nullptr) {
-    delete GiBHepMother;
-  };
-  if (GiBHepGeneration != nullptr) {
-    delete GiBHepGeneration;
-  };
+  delete StdHepPdg;
+  delete StdHepStatus;
+#ifndef CPP03COMPAT
+  delete GiBHepHistory;
+  delete GiBHepFather;
+  delete GiBHepMother;
+  delete GiBHepGeneration;
+#endif
 }
 
 void GiRooTracker::Reset() {
@@ -49,9 +40,11 @@ void GiRooTracker::Reset() {
   Utils::ClearPointer(StdHepPdg, kGiStdHepNPmax);
   Utils::ClearPointer(StdHepStatus, kGiStdHepNPmax);
   Utils::ClearPointer(GiBHepHistory, kGiStdHepNPmax);
+#ifndef CPP03COMPAT
   Utils::ClearPointer(GiBHepFather, kGiStdHepNPmax);
   Utils::ClearPointer(GiBHepMother, kGiStdHepNPmax);
   Utils::ClearPointer(GiBHepGeneration, kGiStdHepNPmax);
+#endif
   Utils::ClearArray2D(StdHepP4);
 }
 
@@ -77,10 +70,12 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
 
   if (AddHistory) {
     tree->Branch("GiBHepHistory", GiBHepHistory, "GiBHepHistory[StdHepN]/L");
+#ifndef CPP03COMPAT
     tree->Branch("GiBHepFather", GiBHepFather, "GiBHepFather[StdHepN]/I");
     tree->Branch("GiBHepMother", GiBHepMother, "GiBHepMother[StdHepN]/I");
     tree->Branch("GiBHepGeneration", GiBHepGeneration,
                  "GiBHepGeneration[StdHepN]/I");
+#endif
   }
   if (AddProdCharge) {
     tree->Branch("GiBUUPrimaryParticleCharge", &GiBUUPrimaryParticleCharge,

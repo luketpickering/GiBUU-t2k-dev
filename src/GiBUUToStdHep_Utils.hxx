@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "Rtypes.h"
-#include "TVector3.h"
 #include "TLorentzVector.h"
+#include "TVector3.h"
 
 #include "GiBUUToStdHep_CLIOpts.hxx"
 
@@ -160,9 +160,12 @@ std::string WriteGiBUUHistory(Long_t HistCode);
 /// * 52 : NCEL neutron-target
 ///
 /// From https://gibuu.hepforge.org/trac/wiki/LesHouches
-int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const* const StdHepPDGArray,
-                       Long_t const* const HistoryArray, Int_t StdHepN,
-                       bool IsCC = true, Int_t StruckNucleonPosition = -1,
+int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
+#ifndef CPP03COMPAT
+                       Long_t const *const HistoryArray,
+#endif
+                       Int_t StdHepN, bool IsCC = true,
+                       Int_t StruckNucleonPosition = -1,
                        Int_t PrimaryProdCharge = -10);
 }
 
@@ -172,8 +175,8 @@ inline std::string NegSpacer(T const &num) {
 }
 
 inline std::ostream &operator<<(std::ostream &os, TVector3 const &tl) {
-  auto prec = os.precision();
-  auto flags = os.flags();
+  std::streamsize prec = os.precision();
+  std::ios_base::fmtflags flags = os.flags();
   os.precision(2);
   os.flags(std::ios::scientific);
   os << " " << NegSpacer(tl[0]) << tl[0] << "," << NegSpacer(tl[1]) << tl[1]
@@ -184,8 +187,8 @@ inline std::ostream &operator<<(std::ostream &os, TVector3 const &tl) {
 }
 
 inline std::ostream &operator<<(std::ostream &os, TLorentzVector const &tlv) {
-  auto prec = os.precision();
-  auto flags = os.flags();
+  std::streamsize prec = os.precision();
+  std::ios_base::fmtflags flags = os.flags();
   os.precision(2);
   os.flags(std::ios::scientific);
   os << "[" << NegSpacer(tlv[0]) << tlv[0] << "," << NegSpacer(tlv[1]) << tlv[1]
