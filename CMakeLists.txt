@@ -46,7 +46,7 @@ endif()
 if(HASSCPP11)
   set(CPPVERSIONFLAGS "-std=c++11")
 else()
-  set(CPPVERSIONFLAGS "-DCPP03COMPAT -std=c++03 -pedantic")
+  set(CPPVERSIONFLAGS "-DCPP03COMPAT -pedantic")
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 ${CPPVERSIONFLAGS}")
