@@ -1031,13 +1031,13 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     }          // QE
     case 2: {  // delta
       if (PrimaryProdCharge == -10) {
-#ifndef CPP03COMPAT
-        return (IsNu ? 1 : -1) *
-               (ResonanceHeuristics(StdHepPDGArray, HistoryArray, StdHepN) +
-                ((!IsCC) * 20));
-#else
+// #ifndef CPP03COMPAT
+//         return (IsNu ? 1 : -1) *
+//                (ResonanceHeuristics(StdHepPDGArray, HistoryArray, StdHepN) +
+//                 ((!IsCC) * 20));
+// #else
         return (IsNu ? 1 : -1) * (11 + ((!IsCC) * 20));
-#endif
+// #endif
       }
 
       if (IsCC) {

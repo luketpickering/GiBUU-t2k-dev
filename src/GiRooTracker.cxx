@@ -5,8 +5,8 @@
 GiRooTracker::GiRooTracker() {
   StdHepPdg = new Int_t[kGiStdHepNPmax];
   StdHepStatus = new Int_t[kGiStdHepNPmax];
-#ifndef CPP03COMPAT
   GiBHepHistory = new Long_t[kGiStdHepNPmax];
+#ifndef CPP03COMPAT
   GiBHepFather = new Int_t[kGiStdHepNPmax];
   GiBHepMother = new Int_t[kGiStdHepNPmax];
   GiBHepGeneration = new Int_t[kGiStdHepNPmax];
@@ -17,8 +17,8 @@ GiRooTracker::GiRooTracker() {
 GiRooTracker::~GiRooTracker() {
   delete StdHepPdg;
   delete StdHepStatus;
-#ifndef CPP03COMPAT
   delete GiBHepHistory;
+#ifndef CPP03COMPAT
   delete GiBHepFather;
   delete GiBHepMother;
   delete GiBHepGeneration;
