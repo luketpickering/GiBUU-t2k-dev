@@ -2,6 +2,15 @@ if (DEFINED USE_GiBUU AND USE_GiBUU)
     set(USE_GiBUU 1)
   include(ExternalProject)
 
+
+  if (DEFINED NO_EXTERNAL_UPDATE AND NO_EXTERNAL_UPDATE)
+      set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                   PROPERTY EP_UPDATE_DISCONNECTED 1)
+      cmessage(STATUS "Will not attempt to update third party tools for each build.")
+    else()
+      set(NO_EXTERNAL_UPDATE 0)
+  endif()
+
   SET(GIBUUVER 6910)
 
   if(${GIBUUVER} EQUAL 6910)
