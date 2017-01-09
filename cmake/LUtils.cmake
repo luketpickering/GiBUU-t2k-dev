@@ -3,7 +3,7 @@ include(ExternalProject)
 if (DEFINED NO_EXTERNAL_UPDATE AND NO_EXTERNAL_UPDATE)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                  PROPERTY EP_UPDATE_DISCONNECTED 1)
-    cmessage(STATUS "Will not attempt to update third party tools for each build.")
+    message(STATUS "Will not attempt to update third party tools for each build.")
   else()
     set(NO_EXTERNAL_UPDATE 0)
 endif()
