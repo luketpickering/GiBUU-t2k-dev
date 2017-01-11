@@ -19,7 +19,7 @@ if [[ "${1}" ]]; then
   else
     echo "[ERROR]: Unexpected argument \"${1}\""
     echo "[RUNLIKE]: ${0} [--no-collisional-broadening|-B] "
-    echo -e "[RUNLIKE]:\t-B: Generate event with collisional broadening off."
+    echo -e "[RUNLIKE]:\t-B: Generate event with collisional broadening off (increased pion production cross section)."
     exit 1
   fi
 

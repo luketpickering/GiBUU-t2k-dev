@@ -23,12 +23,12 @@
 
 ## Running event selections
 
-  Most analyses will want to post process the particle stack, or make
+  Most analyses will want to post-process the particle stack, or make
   selections, or build composite properties. The reader is directed to the
   [NUISANCE](nuisance.hepforge.org) project and the 'GenericFluxTester' tool
   therein which makes writing such an analysis simple.
 
-  As a rudimentary example of such post processing, execute
+  As a rudimentary example of such post-processing, execute
   `$ Select_CC1pip_GiBUUStdHep <input_GiBUU.stdhep.root>` passing a produced
   GiBUU stdhep file. Herein, one produced by executing
   `$ Generate_MiniBooNE_numuCC_CH2_Events_GIBUU 5` will be used. This script

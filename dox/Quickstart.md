@@ -19,7 +19,7 @@ Here should be the fastest way to make a GiBUU prediction.
   - `$ Generate_MiniBooNE_numuCC_CH2_Events_GIBUU`
   - Make a coffee, or three.
 
-  If you want to up the stats, pass an integer as an argument to the
+  If you want to up the stats, pass an integer as an argument to
   `Generate_MiniBooNE_numuCC_CH2_Events_GIBUU`,
   this will set `input:num_runs_SameEnergy`. This will increase the time to
   generate linearly with the number passed. Passing `10` will generate O(1.6E5)
@@ -56,8 +56,9 @@ Here should be the fastest way to make a GiBUU prediction.
   GiBUUTools repo!
 
   **For all your comparison needs, consider using
-  [NUISANCE](nuisance.hepforge.org), a generic global xsec generator tuner and
-  comparison synthesiser.**
+  [NUISANCE](nuisance.hepforge.org), a generic, global, (neutrino) interaction
+  cross section comparison synethsiser. It also includes dedicated tools for
+  automatic (where reweight libraries exist) generator tuning.**
 
 ## Look at other fluxes/target
 
@@ -76,7 +77,7 @@ Here should be the fastest way to make a GiBUU prediction.
   There is a set of example scripts that live in ${GIBUUTOOLSROOT}/batchjobs.
   These are written to work with SGE qsub. Executing GenerateAll.sh will
   send off about 500 jobs, generating O(2 million) events for 5 fluxes, and at
-  two settings for each flux. It will also hold queue the conversion to StdHep
+  two model tunings for each flux. It will also hold queue the conversion to StdHep
   process, which will automatically run after the events have been generated.
 
   The Generate_Batch.sh script is a more generic script for submitting jobs to
@@ -86,7 +87,8 @@ Here should be the fastest way to make a GiBUU prediction.
   wrong-sign background flux (numubar in numu beam and vice versa). Execute
   `${GIBUUTOOLS}/bacthjobs/Generate_Batch.sh -?` to see a list of options.
 
-  If you environment for executing GiBUU requires any additional setup other
+  **Note:** If your environment for executing GiBUU (non-system compilers,
+  ROOT, other...) requires any additional setup other
   than `${GIBUUTOOLS}/setup.sh`, then you will need to add your environment
   setup to ${GIBUUTOOLS}/batchjobs/RunGiBUUBatch.sh, this is the script that
   will be run on the compute nodes.

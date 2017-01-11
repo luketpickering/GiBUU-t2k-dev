@@ -5,7 +5,7 @@
   composite targets, or by multiple neutrino species, or both CC and NC events
   in the same run, multiple, separate GiBUU runs must be consistently combined.
 
-  Note event when consistently combined, the raw events will not be correctly
+  **Note:** even when consistently combined, the raw events will not be `correctly'
   distributed, however, the event weights will be correct. **You must always
   weight event properties by the `EvtWght` when building histograms**.
 
@@ -21,6 +21,9 @@
   Command line options are split into two types, ones that affect the whole
   parsing, and ones that affect only the next file or group of files.
 
+  Any of these arguments can be placed inside a space and newline separated
+  ascii file which can then be passed to `GiBUUToStdHep` by the `-@` argument.
+
 ## Whole parsing options
 
   * `(-s|--long-form) <Option Type {default value}> [Required or not]`: Example of an option described by this documentation.
@@ -28,6 +31,7 @@
 
   * `(-h|--help)`: Print a help message with a usage example.
   * `(-c|--CompositeExample)`: Print the example usage for building a full CH-target vector including neutrino and anti-neutrino flux components
+  * `(-@) <FileName>` : Replace this CLI argument with the contents of the referenced file. Useful for organising the large number of required arguments for a composite target vector.
   * `(-o|--output-file) <FileName {default:GiBUURooTracker.root}>`: The output file name.
   * `(-R|--Total-ReWeight) [i]<[1.0/]float>`: The overall weight to apply to the output vector, useful for outputting a composite-target vector with xsec weights in units of `/nucleon`. If the value is prepended with an `i` then the inverse of the numerical part of the option is used, e.g. if `-T i12` is passed, then the file weight will be `1/12`.
   * `(-NI|--No-Initial-State)`: If you are using an old version of GiBUU which does not output initial state/target nucleon information this will not look for it. GiBUU2016 has initial state information in the output FinalEvents.dat
@@ -42,13 +46,13 @@
   Carbon-target, or Hydrogen-target. The options will be described before a few
   examples are given, which should hopefully make their use more clear.
 
-    * `(-u|--nu-pdg) <int> [required at least once]`: Specifies the neutrino species PDG of the next file(s). **Note:** This option is assumed for subsequent `-f` options until overriden.
-    * `(-N|--is-NC)`: Specifies whether the next file(s) are simulated NC events. **Note:** This option is assumed for subsequent `-f` options until overriden.
-    * `(-a|--target-a) <int> [required at least once]`: Specifies the nucleon number of the target used in the next file(s). **Note:** This option is assumed for subsequent `-f` options until overriden.
-    * `(-z|--target-z) <int> [required at least once]`: Specifies the nucleon number of the target used in the next file(s). **Note:** This option is assumed for subsequent `-f` options until overriden.
-    * `(-W|--file-weight) [i]<[1.0/]float>`: Specifies the overall file target weight for the next file(s). If the value is prepended with an `i` then the inverse of the numerical part of the option is used, e.g. if `-T i12` is passed, then the file weight will be `1/12`. **Note:** This option is reset to `1.0` for subsequent `-f` options, the next file(s) weight *must* be specified for each set of files to be parsed.
-    * `(-f|--FEinput-file) <File Name>  [required at least once]`: Specifies the next file(s) to parse, which all previous 'per file' options will apply to. Wildcards are allowed at the file level of the specifier, but not at a directory level: e.g. `-f "some/subdir/FinalEvents*.dat"` is allowed but `-f "some/sub*dir/FinalEvents.dat"` is not. Averaging over multiple runs is handled automatically, so the file weight specified by `-W` does not need to account for multiple files being parsed due to the wildcard expansion. **Note:** Be careful not to let the calling shell expand the wildcard, when using a wildcard in the file specifier, wrap the path in double quotes, e.g.: `-f "path/to/some/files*.dat"`.
-    * `(-F|--Save-Flux-File) <output_hist_name,input_text_flux_file.txt>`: This option is used to save the GiBUU-style bin-centered flux histogram stored in `'input_text_flux_file.txt'` as a ROOT `TH1` named `'output_hist_name'` in the output file. This can be useful for some downstream code.
+  * `(-u|--nu-pdg) <int> [required at least once]`: Specifies the neutrino species PDG of the next file(s). **Note:** This option is assumed for subsequent `-f` options until overriden.
+  * `(-N|--is-NC)`: Specifies whether the next file(s) are simulated NC events. **Note:** This option is assumed for subsequent `-f` options until overriden.
+  * `(-a|--target-a) <int> [required at least once]`: Specifies the nucleon number of the target used in the next file(s). **Note:** This option is assumed for subsequent `-f` options until overriden.
+  * `(-z|--target-z) <int> [required at least once]`: Specifies the nucleon number of the target used in the next file(s). **Note:** This option is assumed for subsequent `-f` options until overriden.
+  * `(-W|--file-weight) [i]<[1.0/]float>`: Specifies the overall file target weight for the next file(s). If the value is prepended with an `i` then the inverse of the numerical part of the option is used, e.g. if `-T i12` is passed, then the file weight will be `1/12`. **Note:** This option is reset to `1.0` for subsequent `-f` options, the next file(s) weight *must* be specified for each set of files to be parsed.
+  * `(-f|--FEinput-file) <File Name>  [required at least once]`: Specifies the next file(s) to parse, which all previous 'per file' options will apply to. Wildcards are allowed at the file level of the specifier, but not at a directory level: e.g. `-f "some/subdir/FinalEvents*.dat"` is allowed but `-f "some/sub*dir/FinalEvents.dat"` is not. Averaging over multiple runs is handled automatically, so the file weight specified by `-W` does not need to account for multiple files being parsed due to the wildcard expansion. **Note:** Be careful not to let the calling shell expand the wildcard, when using a wildcard in the file specifier, wrap the path in double quotes, e.g.: `-f "path/to/some/files*.dat"`.
+  * `(-F|--Save-Flux-File) <output_hist_name,input_text_flux_file.txt>`: This option is used to save the GiBUU-style bin-centered flux histogram stored in `'input_text_flux_file.txt'` as a ROOT `TH1` named `'output_hist_name'` in the output file. This can be useful for some downstream code.
 
 ## Notes on event weight combinations
 
@@ -109,8 +113,7 @@
         -R i14 -o numu_CH2_CC.stdhep.root
 
 
-  You can see that it is starting to build up... (In future there might be a
-  card-file style option specifier).
+  You can see that it is starting to build up...
 
 ### Full example
 
@@ -126,14 +129,14 @@
           -a 1 -z 1 -W 2 -f "FHC_nue_H_CC/FinalEvents_*.dat"\
         -u -12 -a 12 -z 6 -W 12 -f "FHC_nuebar_C_CC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_nuebar_H_CC/FinalEvents_*.dat"\
-      -N \
-        -u 14 -a 12 -z 6 -W 12 -f "FHC_numu_C_NC/FinalEvents_*.dat" \
+       \
+        -N -u 14 -a 12 -z 6 -W 12 -f "FHC_numu_C_NC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_numu_H_NC/FinalEvents_*.dat" \
-        -u -14 -a 12 -z 6 -W 12 -f "FHC_numubar_C_NC/FinalEvents_*.dat" \
+        -N -u -14 -a 12 -z 6 -W 12 -f "FHC_numubar_C_NC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_numubar_H_NC/FinalEvents_*.dat"\
-        -u 12 -a 12 -z 6 -W 12 -f "FHC_nue_C_NC/FinalEvents_*.dat" \
+        -N -u 12 -a 12 -z 6 -W 12 -f "FHC_nue_C_NC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_nue_H_NC/FinalEvents_*.dat"\
-        -u -12 -a 12 -z 6 -W 12 -f "FHC_nuebar_C_NC/FinalEvents_*.dat" \
+        -N -u -12 -a 12 -z 6 -W 12 -f "FHC_nuebar_C_NC/FinalEvents_*.dat" \
           -a 1 -z 1 -W 2 -f "FHC_nuebar_H_NC/FinalEvents_*.dat" \
         -R i14 -o numu_CH2_CC.stdhep.root
 

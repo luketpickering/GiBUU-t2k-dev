@@ -9,8 +9,8 @@
   a given jobcard, execute: `GiBUU.x < my.job`. This will output O(100) files,
   so it is probably worthwhile running it in a subdirectory of anywhere you
   care about. The main file that we will use is `FinalEvents.dat`, which is the
-  text event vector. If this was not produced when running, check that
-  `neutrinoAnalysis:outputEvents=.true.` is set.
+  ASCII event vector. If this was not produced when running, check that
+  `neutrinoAnalysis:outputEvents=.true.` is set in the jobcard.
 
 # Useful jobcard options
 
@@ -38,7 +38,7 @@
   It can comprehend relative paths so `input:buuinput='./BUUInput'` is an
   acceptable value.
 
-  GiBUU was not designed as a neutrino generator and thus has a significant
+  GiBUU was not designed as a neutrino event generator and thus has a significant
   number of options that you are unlikely to want to play with from a neutrino
   interaction physics standpoint. A good base jobcard can be dumped to the
   current directory by using the command `GiBUUInitNeutrinoJobCard`. More

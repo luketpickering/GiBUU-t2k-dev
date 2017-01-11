@@ -8,11 +8,16 @@ NEUT-equivalent neutrino interaction mode.
 The individual output branches are well documented in the doxygen autodocs
 below: GiRooTracker.
 
-The correspondence between GiBUU's internal 'prodid' and the converted Neut-equivalent code
-can be seen in the documentation for: GiBUUUtils::GiBUU2NeutReacCode.
+The correspondence between GiBUU's internal 'prodid' and the converted
+Neut-equivalent code can be seen in the documentation for
+GiBUUUtils::GiBUU2NeutReacCode.
 
-The correspondence between GiBUU's internal particle numbering scheme and the pdg codes
-can be seen in the documentation for: GiBUUUtils::GiBUUToPDG.
+The correspondence between GiBUU's internal particle numbering scheme and the
+pdg codes can be seen in the documentation for: GiBUUUtils::GiBUUToPDG.
+
+**Note:** Some of the GiBUU Ids correspond baryons without an equivalent PDG
+code, there are also a few undocumented Ids that have been seen, in this case
+the PDG code in the particle stack will unfortunately be 0.
 
 **Note:** Following the GENIE convention, the struck nucleon is given a
 `StdHepStatus == 11`.
