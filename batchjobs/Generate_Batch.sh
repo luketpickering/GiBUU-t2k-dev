@@ -993,7 +993,7 @@ if [[ "${N_CC_JOBS_NUE}" != "0" ]]; then
     ################################################################################
     ##                         Build Replacements: NUE H target CC
     ################################################################################
-    echo -e "__NU_FLAVOR_CODE__ 2\n\
+    echo -e "__NU_FLAVOR_CODE__ 1\n\
     __NU_INTERACTION_TYPE__ ${NUE_FLUX_CC_NU_SPEC}\n\
     __FLUX_FILE__ ./NUE_flux.txt\n\
     __TARGET_A__ 1\n\
@@ -1239,7 +1239,7 @@ if [[ "${N_CC_JOBS_WSB_NUE}" != "0" ]]; then
     ################################################################################
     ##                         Build Replacements: WSB_NUE H target CC
     ################################################################################
-    echo -e "__NU_FLAVOR_CODE__ 2\n\
+    echo -e "__NU_FLAVOR_CODE__ 1\n\
     __NU_INTERACTION_TYPE__ ${WSB_NUE_FLUX_CC_NU_SPEC}\n\
     __FLUX_FILE__ ./WSB_NUE_flux.txt\n\
     __TARGET_A__ 1\n\
@@ -1276,10 +1276,10 @@ if [[ "${N_CC_JOBS_WSB_NUE}" != "0" ]]; then
     ################################################################################
 
     Flux_WSB_NUE_CC_H_JID_MSG=$(qsub -N Gen_WSB_NUEF_CC_H -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} -t 1-${N_CC_JOBS_WSB_NUE} ${GIBUUTOOLSROOT}/batchjobs/RunGiBUUBatch.sh)
-    Flux_WSB_NUE_CC_H_JID=$(echo "${Flux_NUE_CC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
-    echo "[INFO]: Flux_NUE_CC H jobs farmed with JID: ${Flux_NUE_CC_H_JID}"
+    Flux_WSB_NUE_CC_H_JID=$(echo "${Flux_WSB_NUE_CC_H_JID_MSG}" | sed "s|^Your job-array \([0-9]\+\)\..*|\1|g")
+    echo "[INFO]: Flux_NUE_CC H jobs farmed with JID: ${Flux_WSB_NUE_CC_H_JID}"
 
-    HOLD_JID="${HOLD_JID} ${Flux_NUE_CC_H_JID}"
+    HOLD_JID="${HOLD_JID} ${Flux_WSB_NUE_CC_H_JID}"
 
     cd ../
 
@@ -1297,7 +1297,7 @@ if [[ "${N_CC_JOBS_WSB_NUE}" != "0" ]]; then
     ##                         Build Replacements: NUE H target NC
     ################################################################################
       echo -e "__NU_FLAVOR_CODE__ 1\n\
-      __NU_INTERACTION_TYPE__ ${NUE_FLUX_NC_NU_SPEC}\n\
+      __NU_INTERACTION_TYPE__ ${WSB_NUE_FLUX_NC_NU_SPEC}\n\
       __FLUX_FILE__ ./WSB_NUE_flux.txt\n\
       __TARGET_A__ 1\n\
       __TARGET_Z__ 1\n\
