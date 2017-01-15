@@ -13,6 +13,10 @@ if [[ -e "flux.txt" ]]; then
   FLUX=$(readlink -f ./flux.txt)
 elif [[ -e "wsb_flux.txt" ]]; then
   FLUX=$(readlink -f ./wsb_flux.txt)
+elif [[ -e "NUE_flux.txt" ]]; then
+  FLUX=$(readlink -f ./NUE_flux.txt)
+elif [[ -e "WSB_NUE_flux.txt" ]]; then
+  FLUX=$(readlink -f ./WSB_NUE_flux.txt)
 else
   echo "[ERROR]: Couldn't find flux.txt or wsb_flux.txt"
   exit 1
