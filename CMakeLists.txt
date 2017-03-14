@@ -21,7 +21,8 @@ get_filename_component (CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
 
 set(HASSCPP11 FALSE)
 # Compiler-specific C++11 activation.
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+if(NOT DEFINED FORCECPP03 OR NOT FORCECPP03)
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
     if (NOT (GCC_VERSION VERSION_GREATER 4.8 OR GCC_VERSION VERSION_EQUAL 4.8))
@@ -30,12 +31,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     else()
       set(HASSCPP11 TRUE)
     endif ()
-elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-    set(HASSCPP11 TRUE)
-else ()
-    message(STATUS "Building in C++03 compatibility mode.")
-endif ()
+  elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+      set(HASSCPP11 TRUE)
+  endif ()
+endif()
 
 set(CPPVERSIONFLAGS "")
 
