@@ -16,7 +16,8 @@ int ValueColumn = 1;
 std::string InputFName = "";
 std::string OutputFName = "";
 bool TextInput = true;
-bool DoPDF = true;
+bool DoPDF = false;
+bool DoUnitNormalise = false;
 std::string InputTHName = "";
 }
 
@@ -39,8 +40,14 @@ int WriteFile(float *BinCenters, float *BinWidths, float *BinValues,
   }
 
   for (size_t i = 0; i < NBins; ++i) {
-    of << BinCenters[i] << " "
-       << (BinValues[i] / (Opts::DoPDF ? Integral : 1.0)) << std::endl;
+    float Val = BinValues[i];
+    if (Opts::DoPDF) {
+      Val /= Integral;
+      Val /= BinWidths[i];
+    } else if (Opts::DoUnitNormalise) {
+      Val /= Integral;
+    }
+    of << BinCenters[i] << " " << Val << std::endl;
   }
   of.close();
   return 0;
@@ -83,9 +90,9 @@ int ROOTTH_ToBinCenterPDFFlux_Text() {
 
 /// I hate TFL
 struct tfl {
-  float lbe;
-  float ube;
-  float v;
+  float lowbinedge;
+  float upbinedge;
+  float value;
 };
 
 int Text_BinEdgeToBinCenterPDFFlux_Text() {
@@ -120,13 +127,13 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
     }
     tfl t;
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
-      t.lbe = splitLine[Opts::LowBinEdgeColumn];
-      t.ube = splitLine[Opts::UpBinEdgeColumn];
-      t.v = splitLine[Opts::ValueColumn];
+      t.lowbinedge = splitLine[Opts::LowBinEdgeColumn];
+      t.upbinedge = splitLine[Opts::UpBinEdgeColumn];
+      t.value = splitLine[Opts::ValueColumn];
     } else {  // Only have low bin edges
-      t.lbe = splitLine[Opts::LowBinEdgeColumn];
-      t.ube = 0xdead;
-      t.v = splitLine[Opts::ValueColumn];
+      t.lowbinedge = splitLine[Opts::LowBinEdgeColumn];
+      t.upbinedge = 0xdead;
+      t.value = splitLine[Opts::ValueColumn];
     }
     BinEdgeVals.push_back(t);
     ln++;
@@ -144,17 +151,18 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
   float *BinValues = new float[BinEdgeVals.size()];
   for (size_t i = 0; i < BinEdgeVals.size(); ++i) {
     if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
-      BinWidths[i] = BinEdgeVals[i].ube - BinEdgeVals[i].lbe;
+      BinWidths[i] = BinEdgeVals[i].upbinedge - BinEdgeVals[i].lowbinedge;
     } else {  // Only have low bin edges
-      BinWidths[i] = ((i + 1) != BinEdgeVals.size())
-                         ? (BinEdgeVals[i + 1].lbe - BinEdgeVals[i].lbe)
-                         : (BinEdgeVals[i].lbe -
-                            BinEdgeVals[i - 1].lbe);  // Assume the last bin is
-                                                      // the same width as the
-                                                      // previous bin
+      BinWidths[i] =
+          ((i + 1) != BinEdgeVals.size())
+              ? (BinEdgeVals[i + 1].lowbinedge - BinEdgeVals[i].lowbinedge)
+              : (BinEdgeVals[i].lowbinedge -
+                 BinEdgeVals[i - 1].lowbinedge);  // Assume the last bin is
+                                                  // the same width as the
+                                                  // previous bin
     }
-    BinCenters[i] = BinEdgeVals[i].lbe + BinWidths[i] / 2.0;
-    BinValues[i] = BinEdgeVals[i].v;
+    BinCenters[i] = BinEdgeVals[i].lowbinedge + BinWidths[i] / 2.0;
+    BinValues[i] = BinEdgeVals[i].value;
   }
 
   bool res = WriteFile(BinCenters, BinWidths, BinValues, BinEdgeVals.size());
@@ -220,9 +228,14 @@ bool Handle_OutputFile(std::string const &opt) {
   std::cout << "\t--Writing to file " << Opts::OutputFName << std::endl;
   return true;
 }
-bool Handle_KeepNorm(std::string const &opt) {
-  Opts::DoPDF = false;
-  std::cout << "\t--Keeping original normalisation " << std::endl;
+bool Handle_MakePDF(std::string const &opt) {
+  Opts::DoPDF = true;
+  std::cout << "\t--Normalisng to unit width integral" << std::endl;
+  return true;
+}
+bool Handle_UnitNorm(std::string const &opt) {
+  Opts::DoUnitNormalise = true;
+  std::cout << "\t--Normalisng to unit integral" << std::endl;
   return true;
 }
 
@@ -244,7 +257,8 @@ void SayRunLike(char const *argv[]) {
       << "\n\t[Arg]: (-r|--input-file-ROOT) <Input ROOT file name>"
       << "\n\t[Arg]: (-H|--input-ROOT-histogram) <Input ROOT histogram name>"
       << "\n\t[Arg]: (-o|--output-file) <Output file name> [Required]"
-      << "\n\t[Arg]: (-k|--keep-norm)" << std::endl;
+      << "\n\t[Arg]: (-w|--width-unit-normalise)"
+      << "\n\t[Arg]: (-n|--unit-normalise)" << std::endl;
 }
 
 bool HandleArgs(int argc, char const *argv[]) {
@@ -336,10 +350,17 @@ bool HandleArgs(int argc, char const *argv[]) {
       LastArgOkay = Handle_OutputFile(opt);
       continue;
     }
-    if (("-k" == arg) || ("--keep-norm" == arg)) {
-      LastArgOkay = Handle_KeepNorm(opt);
+
+    if (("-w" == arg) || ("--width-unit-normalise" == arg)) {
+      LastArgOkay = Handle_MakePDF(opt);
       continue;
     }
+
+    if (("-n" == arg) || ("--unit-normalise" == arg)) {
+      LastArgOkay = Handle_UnitNorm(opt);
+      continue;
+    }
+
     if (("-?" == arg) || ("-h" == arg) || ("--help" == arg)) {
       SayRunLike(argv);
       exit(0);
