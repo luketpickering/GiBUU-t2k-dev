@@ -18,6 +18,13 @@ extern std::string OutFName;
 ///\note Assumed true.
 extern bool HaveStruckNucleonInfo;
 
+/// Whether GiBUU input is from an EM (electron) scattering simulation.
+///
+///\note Assumed false.
+extern bool IsElectronScattering;
+/// The electron beam energy used.
+extern double EScatteringInputEnergy;
+
 ///\brief The neutrino species PDG.
 ///
 ///\note Set by

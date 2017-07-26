@@ -49,7 +49,7 @@ void GiRooTracker::Reset() {
 }
 
 void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
-                               bool AddProdCharge) {
+                               bool AddProdCharge, bool IsElectronScattering) {
   tree->Branch("GiBUU2NeutCode", &GiBUU2NeutCode, "GiBUU2NeutCode/I");
   tree->Branch("GiBUUReactionCode", &GiBUUReactionCode, "GiBUUReactionCode/I");
 
@@ -64,9 +64,11 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
   tree->Branch("NumRunsWeight", &NumRunsWeight, "NumRunsWeight/D");
   tree->Branch("FileExtraWeight", &FileExtraWeight, "FileExtraWeight/D");
   tree->Branch("EvtWght", &EvtWght, "EvtWght/D");
-  tree->Branch("SpeciesWght_numu", &SpeciesWght_numu, "SpeciesWght_numu/D");
-  tree->Branch("SpeciesWght_nue", &SpeciesWght_nue, "SpeciesWght_nue/D");
-  tree->Branch("SpeciesWght", &SpeciesWght, "SpeciesWght/D");
+  if (!IsElectronScattering) {
+    tree->Branch("SpeciesWght_numu", &SpeciesWght_numu, "SpeciesWght_numu/D");
+    tree->Branch("SpeciesWght_nue", &SpeciesWght_nue, "SpeciesWght_nue/D");
+    tree->Branch("SpeciesWght", &SpeciesWght, "SpeciesWght/D");
+  }
 
   if (AddHistory) {
     tree->Branch("GiBHepHistory", GiBHepHistory, "GiBHepHistory[StdHepN]/L");

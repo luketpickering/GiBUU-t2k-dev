@@ -167,6 +167,23 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
                        Int_t StdHepN, bool IsCC = true,
                        Int_t StruckNucleonPosition = -1,
                        Int_t PrimaryProdCharge = -10);
+
+///\brief Converts a GiBUU interaction code to a NEUT-like code for e-scattering
+/// events
+///
+/// EM:
+/// * 1 : QE
+/// * 2 : 2p2h
+/// * 10 : Single pion background (non-resonant)
+/// * 11 : Delta
+/// * 21 : Multi pion production
+/// * 26 : DIS
+/// * 4 : Higher resonance, charge
+///
+/// From https://gibuu.hepforge.org/trac/wiki/LesHouches
+int GiBUU2NeutReacCode_escat(Int_t GiBUUCode,
+                             Int_t const *const StdHepPDGArray);
+
 }
 
 template <typename T>

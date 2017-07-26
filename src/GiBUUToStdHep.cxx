@@ -190,6 +190,17 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] = ev.front().Enu;
       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().Enu;
 
+      if (GiBUUToStdHepOpts::EScatteringInputEnergy = 0xdeadbeef) {
+        GiBUUToStdHepOpts::EScatteringInputEnergy = ev.front().Enu;
+      } else if (fabs(GiBUUToStdHepOpts::EScatteringInputEnergy -
+                      ev.front().Enu) > 1E-5) {
+        UDBError("Read a differing input energy: First event: "
+                 << GiBUUToStdHepOpts::EScatteringInputEnergy << ", event "
+                 << EvNum << " in file \"" << fname << "\" had "
+                 << ev.front().Enu);
+        throw;
+      }
+
       // target
       giRooTracker->StdHepPdg[1] =
           Utils::MakeNuclearPDG(FileTargetZ, FileTargetA);
@@ -206,7 +217,9 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       giRooTracker->GiBUUPerWeight = ev.front().PerWeight;
       giRooTracker->NumRunsWeight = NRunsScaleFactor;
       giRooTracker->FileExtraWeight = FileExtraWeight;
-      giRooTracker->EvtWght = giRooTracker->GiBUUPerWeight * TotalEventReweight;
+      giRooTracker->EvtWght =
+          giRooTracker->GiBUUPerWeight * TotalEventReweight *
+          (GiBUUToStdHepOpts::IsElectronScattering ? 1E5 : 1);
 
       giRooTracker->StdHepN = 2;
 
@@ -281,23 +294,29 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       }  // If we broke then don't bother continuing
          // processing.
 
-      try {
-        giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
-            giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
+      if (GiBUUToStdHepOpts::IsElectronScattering) {
+        giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode_escat(
+              giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg);
+      } else {
+        try {
+          giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
+              giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
+
 #ifndef CPP03COMPAT
-            giRooTracker->GiBHepHistory,
+              giRooTracker->GiBHepHistory,
 #endif
-            giRooTracker->StdHepN, FileIsCC,
-            (GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : -1,
-            GiBUUToStdHepOpts::HaveProdChargeInfo
-                ? giRooTracker->GiBUUPrimaryParticleCharge
-                : -10);
-      } catch (...) {
-        UDBLog("Caught error in " << fname << ":" << ev.front().ln);
-        if (GiBUUToStdHepOpts::StrictMode) {
-          return 1;
-        } else {
-          continue;
+              giRooTracker->StdHepN, FileIsCC,
+              (GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : -1,
+              GiBUUToStdHepOpts::HaveProdChargeInfo
+                  ? giRooTracker->GiBUUPrimaryParticleCharge
+                  : -10);
+        } catch (...) {
+          UDBLog("Caught error in " << fname << ":" << ev.front().ln);
+          if (GiBUUToStdHepOpts::StrictMode) {
+            return 1;
+          } else {
+            continue;
+          }
         }
       }
 
@@ -388,13 +407,13 @@ int GetPDGFromHistName(std::string const &histname) {
   }
 }
 
-void HandleFluxIntegralLine(std::string const &fln,
-                            std::string const &histname) {
+std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
+                                                 std::string const &histname) {
   int pdgfromhistname = GetPDGFromHistName(histname);
   if (!pdgfromhistname) {
     UDBWarn("Failed to parse the correct species from histname:\"" << histname
                                                                    << "\"");
-    return;
+    return std::pair<double, double>(0, 0);
   }
   if (FluxComponentIntegrals.count(pdgfromhistname)) {
     UDBWarn("Already read a flux file for hist: " << histname
@@ -411,7 +430,7 @@ void HandleFluxIntegralLine(std::string const &fln,
         << "\" will not be correctly normalisable in a multi-species sample.");
     UDBWarn("From flux line: " << fln);
 
-    return;
+    return std::pair<double, double>(0, 0);
   }
   size_t wi_it = fln.find("(width integral: ");
 
@@ -422,13 +441,30 @@ void HandleFluxIntegralLine(std::string const &fln,
         << histname
         << "\" will not be correctly normalisable in a multi-species sample.");
     UDBWarn("From flux line: " << fln);
-    return;
+    return std::pair<double, double>(0, 0);
   }
 
   size_t end_bracket = fln.find_last_of(")");
 
+  double fi;
+  std::string IntegString = fln.substr(22, wi_it - (22));
+  try {
+    fi = Utils::str2d(IntegString, true);
+  } catch (std::exception const &e) {
+    UDBWarn("Input flux file integral comment (\""
+            << IntegString << "\") could not be parsed for the "
+                              "flux species "
+                              "associated with \""
+            << histname << "\".");
+    UDBWarn("From flux line: " << fln);
+    UDBWarn("Parsing exception: " << e.what());
+    fi = 0;
+  }
+
+  UDBLog("Parsed flux integral as: " << fi << " from line: " << fln);
+
   double fci;
-  std::string IntegString = fln.substr(wi_it + 17, end_bracket - (wi_it + 17));
+  IntegString = fln.substr(wi_it + 17, end_bracket - (wi_it + 17));
   try {
     fci = Utils::str2d(IntegString, true);
   } catch (std::exception const &e) {
@@ -440,12 +476,14 @@ void HandleFluxIntegralLine(std::string const &fln,
                            "multi-species sample.");
     UDBWarn("From flux line: " << fln);
     UDBWarn("Parsing exception: " << e.what());
-    return;
+    return std::pair<double, double>(0, 0);
   }
 
   UDBLog("Parsed flux width integral as: " << fci << " from line: " << fln);
 
   FluxComponentIntegrals[pdgfromhistname] = fci;
+
+  return std::pair<double, double>(fi, fci);
 }
 
 void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
@@ -458,10 +496,11 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
 
   size_t ln = 0;
   std::vector<std::pair<double, double> > FluxValues;
+  std::pair<double, double> FluxIntegrals(0, 0);
   while (std::getline(ifs, line)) {
     if (line[0] == '#') {  // ignore comments
       if (ln == 0) {
-        HandleFluxIntegralLine(line, histname);
+        FluxIntegrals = HandleFluxIntegralLine(line, histname);
       }
       ln++;
       continue;
@@ -501,6 +540,11 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
 
   for (Int_t bin_it = 1; bin_it < fluxHist->GetNbinsX() + 1; bin_it++) {
     fluxHist->SetBinContent(bin_it, FluxValues[bin_it - 1].second);
+  }
+
+  if (FluxIntegrals.first > 1E-8) {
+    fluxHist->Scale(1. / fluxHist->Integral());
+    fluxHist->Scale(FluxIntegrals.first);
   }
 
   fluxHist->Write();
@@ -605,6 +649,12 @@ int GiBUUToStdHep() {
 
   int ParserRtnCode = 0;
   ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
+
+  if (GiBUUToStdHepOpts::IsElectronScattering) {
+    TH1D *eFlux = new TH1D("e_flux", "e_flux", 100, 0,
+                           2 * GiBUUToStdHepOpts::EScatteringInputEnergy);
+    eFlux->Fill(GiBUUToStdHepOpts::EScatteringInputEnergy);
+  }
 
   rooTrackerTree->Write();
 

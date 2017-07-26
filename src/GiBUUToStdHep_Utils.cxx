@@ -1031,13 +1031,14 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
     }          // QE
     case 2: {  // delta
       if (PrimaryProdCharge == -10) {
-// #ifndef CPP03COMPAT
-//         return (IsNu ? 1 : -1) *
-//                (ResonanceHeuristics(StdHepPDGArray, HistoryArray, StdHepN) +
-//                 ((!IsCC) * 20));
-// #else
+        // #ifndef CPP03COMPAT
+        //         return (IsNu ? 1 : -1) *
+        //                (ResonanceHeuristics(StdHepPDGArray, HistoryArray,
+        //                StdHepN) +
+        //                 ((!IsCC) * 20));
+        // #else
         return (IsNu ? 1 : -1) * (11 + ((!IsCC) * 20));
-// #endif
+        // #endif
       }
 
       if (IsCC) {
@@ -1155,6 +1156,71 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
       << PrintGiBUUStdHepArray(GiBUUCode, StdHepPDGArray, HistoryArray,
                                StdHepN));
 #endif
+  return 0;
+}
+
+int GiBUU2NeutReacCode_escat(Int_t GiBUUCode,
+                             Int_t const *const StdHepPDGArray) {
+  // 1=QE, 2-31=res ID, 32,33=1pi, 34=DIS, 35,36=2p2h, 37=2pi
+  // From https://gibuu.hepforge.org/trac/wiki/LesHouches
+
+  bool IsEle = (StdHepPDGArray[0] > 0);
+
+  switch (GiBUUCode) {
+    case 1: {
+      return (IsEle ? 1 : -1);
+    }          // QE
+    case 2: {  // delta
+      return (IsEle ? 11 : -11);
+    }
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+    case 24:
+    case 25:
+    case 26:
+    case 27:
+    case 28:
+    case 29:
+    case 30:
+    case 31: {  // CCResonance
+      return (IsEle ? 4 : -4);
+    }
+    case 32:
+    case 33: {  // 1Pi Bkg
+      return (IsEle ? 10 : -10);
+    }
+    case 34: {  // DIS
+      return (IsEle ? 26 : -26);
+    }
+    case 35:
+    case 36: {  // MEC/2p-2h
+      return (IsEle ? 2 : -2);
+    }
+    case 37: {  // MultiPi
+      return (IsEle ? 21 : -21);
+    }
+    default: {}
+  }
+
   return 0;
 }
 }

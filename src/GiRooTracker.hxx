@@ -133,6 +133,6 @@ struct GiRooTracker {
 
   ///\brief Will add the relevant output branches to a given TTree.
   void AddBranches(TTree*& tree, bool AddHistory = false,
-                   bool AddProdCharge = false);
+                   bool AddProdCharge = false, bool IsElectronScattering=false);
 };
 #endif

@@ -14,20 +14,23 @@
 
 /// Options relevant to the GiBUUToStdHep.exe executable.
 namespace GiBUUToStdHepOpts {
-  std::vector<std::string> InpFNames;
-  std::string OutFName;
-  bool HaveStruckNucleonInfo;
-  std::vector<int> nuTypes;
-  std::vector<int> TargetAs;
-  std::vector<int> TargetZs;
-  std::vector<bool> CCFiles;
-  std::vector<double> FileExtraWeights;
-  std::vector<double> NFilesAddedWeights;
-  double OverallWeight = 1;
-  std::map<int, double> CompositeFluxWeight;
-  bool HaveProdChargeInfo = false;
-  std::vector<std::pair<std::string, std::string> > FluxFilesToAdd;
-  bool StrictMode = true;
+std::vector<std::string> InpFNames;
+std::string OutFName;
+bool HaveStruckNucleonInfo;
+bool IsElectronScattering = false;
+bool FilesFromSameRun = false;
+double EScatteringInputEnergy;
+std::vector<int> nuTypes;
+std::vector<int> TargetAs;
+std::vector<int> TargetZs;
+std::vector<bool> CCFiles;
+std::vector<double> FileExtraWeights;
+std::vector<double> NFilesAddedWeights;
+double OverallWeight = 1;
+std::map<int, double> CompositeFluxWeight;
+bool HaveProdChargeInfo = false;
+std::vector<std::pair<std::string, std::string> > FluxFilesToAdd;
+bool StrictMode = true;
 }
 
 std::vector<std::string> CLIFileArgs;
@@ -97,8 +100,12 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
 
     for (size_t file_it = 0; file_it < NFilesAdded; ++file_it) {
       GiBUUToStdHepOpts::FileExtraWeights.push_back(FileExtraWeight);
-      GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0 /
-                                                      double(NFilesAdded));
+      if (!GiBUUToStdHepOpts::FilesFromSameRun) {
+        GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0 /
+                                                        double(NFilesAdded));
+      } else {
+         GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0);
+      }
     }
     if (NFilesAdded) {
       UDBLog("Added " << NFilesAdded << " overall weight: "
@@ -146,9 +153,15 @@ bool Handle_FEFile(std::string const &opt) {
   if ((!GiBUUToStdHepOpts::nuTypes.size()) ||
       (!GiBUUToStdHepOpts::TargetAs.size()) ||
       (!GiBUUToStdHepOpts::TargetZs.size())) {
-    UDBError(
-        "-u X -a Y -z Z must be specified before the "
-        "first input file.");
+    if (GiBUUToStdHepOpts::IsElectronScattering) {
+      UDBError(
+          "-e -a X -z Y must be specified before the "
+          "first input file.");
+    } else {
+      UDBError(
+          "-u X -a Y -z Z must be specified before the "
+          "first input file.");
+    }
     return false;
   }
 
@@ -205,6 +218,20 @@ bool Handle_nuPDG(std::string const &opt) {
     return false;
   }
 
+  switch (ival) {
+    case 12:
+    case 14:
+    case 16:
+      break;
+    case 11:
+      UDBError(
+          "Did you mean to specify -e for electron scattering events instead "
+          "of -u 11?");
+    default:
+      UDBError("Passed neutrino PDG: " << opt << ", expected [12,14,16].");
+      return false;
+  }
+
   UDBLog("\t--Assuming next file has Nu PDG: " << ival);
   GiBUUToStdHepOpts::nuTypes.push_back(ival);
 
@@ -218,6 +245,13 @@ bool Handle_nuPDG(std::string const &opt) {
   return true;
 }
 
+bool Handle_eScat(std::string const &opt) {
+  UDBLog("\t--Assuming all files contains electron scattering events.");
+  GiBUUToStdHepOpts::IsElectronScattering = true;
+  GiBUUToStdHepOpts::nuTypes.push_back(11);
+  return true;
+}
+
 bool Handle_IsNC(std::string const &opt) {
   if (GiBUUToStdHepOpts::CCFiles.size() > GiBUUToStdHepOpts::InpFNames.size()) {
     UDBError(
@@ -226,7 +260,7 @@ bool Handle_IsNC(std::string const &opt) {
     return false;
   }
 
-  UDBLog("\t--Assuming next files contains NC event.");
+  UDBLog("\t--Assuming next files contains NC events.");
   GiBUUToStdHepOpts::CCFiles.push_back(false);
   return true;
 }
@@ -416,9 +450,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
   std::string arg, opt;
   for (size_t opt_it = 0; opt_it < ArgArray.size();) {
     if (!LastArgOkay) {
-      UDBError("Argument: \"" << arg << (arg.length() ? std::string(" ") + arg
-                                                      : std::string(""))
-                              << "\" was not correctly understood.");
+      UDBError("Argument: \"" << arg << "\" was not correctly understood.");
       return false;
     }
     arg = ArgArray[opt_it++];
@@ -428,20 +460,28 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
 
+    if (("-s" == arg) || ("--same-run" == arg)) {
+      opt = ArgArray[opt_it++];
+      GiBUUToStdHepOpts::FilesFromSameRun = true;
+      continue;
+    }
+
     if (("-f" == arg) || ("--FEinput-file" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter  expected an option.");
         SayRunLike(argv);
         exit(1);
       }
       opt = ArgArray[opt_it++];
       LastArgOkay = Handle_FEFile(opt);
+      //Reset after adding some files.
+      GiBUUToStdHepOpts::FilesFromSameRun = false;
       requiredArguments |= 1;
       continue;
     }
 
     if (("-o" == arg) || ("--output-file" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -o expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -452,7 +492,13 @@ bool HandleArgs(int const argc, char const *argv[]) {
     }
 
     if (("-u" == arg) || ("--nu-pdg" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (GiBUUToStdHepOpts::IsElectronScattering) {
+        UDBError(
+            "Already passed a -e option to specify electron scattering, cannot "
+            "also pass -u to specify neutrino species.") SayRunLike(argv);
+        exit(1);
+      }
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -u expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -462,12 +508,24 @@ bool HandleArgs(int const argc, char const *argv[]) {
       requiredArguments |= 2;
       continue;
     }
+    if (("-e" == arg) || ("--e-scattering" == arg)) {
+      if (GiBUUToStdHepOpts::nuTypes.size()) {
+        UDBError(
+            "Already passed a -u option to specify neutrino species, cannot "
+            "also pass -e.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      LastArgOkay = Handle_eScat(opt);
+      requiredArguments |= 2;
+      continue;
+    }
     if (("-N" == arg) || ("--is-NC" == arg)) {
       LastArgOkay = Handle_IsNC(opt);
       continue;
     }
     if (("-a" == arg) || ("--target-a" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -a expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -478,7 +536,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
     if (("-z" == arg) || ("--target-z" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -z expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -490,7 +548,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
     }
 
     if (("-W" == arg) || ("--file-weight" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -W expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -500,7 +558,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
     if (("-R" == arg) || ("--Total-ReWeight" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -R expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -510,7 +568,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
     if (("-v" == arg) || ("--Verbosity" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -v expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -528,7 +586,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
     if (("-F" == arg) || ("--Save-Flux-File" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -F expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -542,7 +600,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       exit(0);
     }
     if (("-@" == arg)) {
-      if(opt_it == ArgArray.size()){
+      if (opt_it == ArgArray.size()) {
         UDBError("Parameter -@ expected an option.");
         SayRunLike(argv);
         exit(1);
@@ -573,9 +631,8 @@ void SayRunLike(char const *argv[]) {
   std::cout
       << "[RUNLIKE]: " << argv[0]
       << "-u <Next file neutrino PDG code> -a <Next file "
-         "target nucleus 'A'> -z <Next file target nucleus 'Z'> -f <File Name> "
-         "[-h] [-@ Read "
-         "CLI from specified file] [-c] [-o <File Name "
+         "target nucleus 'A'> -z <Next file target nucleus 'Z'> [-s] -f <File "
+         "Name> [-h] [-@ Read CLI from specified file] [-c] [-o <File Name "
          "{default:GiBUURooTracker.root}>] [-N] [-W [i]<Next file target "
          "weight [1.0/]'W'>] [-R [i]<Overall extra weight [1.0/]'W' -- This is "
          "most useful for weighting composite targets back to a weight per "
@@ -587,14 +644,21 @@ void SayRunLike(char const *argv[]) {
       << "\n\t[Arg]: (-h|-?|--help)"
       << "\n\t[Arg]: (-@) Read CLI from specified file"
       << "\n\t[Arg]: (-c|--CompositeExample)"
+      << "\n\t[Arg]: (-s|--same-run) Don't automatically average over "
+         "NFilesAdded for the next -f arg."
       << "\n\t[Arg]: (-f|--FEinput-file) <File Name> [Required]"
-      << "\n\t[Arg]: (-o|--output-file) <File Name {default:GiBUURooTracker.root}>"
-      << "\n\t[Arg]: (-u|--nu-pdg) <Next file neutrino PDG code> [Required]"
+      << "\n\t[Arg]: (-o|--output-file) <File Name "
+         "{default:GiBUURooTracker.root}>"
+      << "\n\t[Arg]: (-u|--nu-pdg) <Next file neutrino PDG code> [Required or "
+         "-e]"
+      << "\n\t[Arg]: (-e|--e-scattering) all files contain electron scattering "
+         "events"
       << "\n\t[Arg]: (-N|--is-NC)"
       << "\n\t[Arg]: (-a|--target-a) <Next file target nucleus 'A'> [Required]"
       << "\n\t[Arg]: (-z|--target-z) <Next file target nucleus 'Z'> [Required]"
       << "\n\t[Arg]: (-W|--file-weight) [i]<Next file target weight [1.0/]'W'>"
-      << "\n\t[Arg]: (-R|--Total-ReWeight) [i]<Overall extra weight [1.0/]'W' -- "
+      << "\n\t[Arg]: (-R|--Total-ReWeight) [i]<Overall extra weight [1.0/]'W' "
+         "-- "
          "This is most useful for weighting composite targets back to a weight "
          "per nucleon>"
       << "\n\t[Arg]: (-v|--Verbosity) <0-4>{default==0}"
