@@ -186,8 +186,8 @@
 +++ ./code/init/neutrino/esample.f90	2016-07-11 11:12:28.904968886 +0100
 @@ -100,8 +100,14 @@
      write(*,*) "Enu_true_upper_cut =",Enu_upper_cut
-     write(*,*) "E-Limit for Qs-Reconstruction =",energylimit_for_Qsrec 
- 
+     write(*,*) "E-Limit for Qs-Reconstruction =",energylimit_for_Qsrec
+
 -    !   Now reading of flux file from buuinput/neutrinos
 +
 +    fileName = trim(fluxfilename)
@@ -198,7 +198,7 @@
 +    end if
 +
      call Write_ReadingInput(fileName,0)
-     
+
      open(13,file=filename,status='old',action='read',iostat=ierr)--- ./code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:30:46.011636255 +0100
 +++ ./code/init/neutrino/expNeutrinofluxes.f90	2016-07-11 11:27:35.433825838 +0100
 @@ -31,6 +31,7 @@
@@ -245,7 +245,7 @@
 + real function ArbFluxInput()
 +    use esample, only : read_fluxfile, eneut
 +
-+    integer,parameter :: NDIM = 210          !maximal dimension of fluxfile
++    integer,parameter :: NDIM = 5000          !maximal dimension of fluxfile
 +    real, dimension (NDIM), save :: enu, flux
 +    real, dimension (0:NDIM), save :: sumflux
 +    integer, save :: jmax
