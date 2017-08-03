@@ -637,7 +637,8 @@ int GiBUUToStdHep() {
   TTree *rooTrackerTree = new TTree("giRooTracker", "GiBUU StdHepVariables");
   GiRooTracker *giRooTracker = new GiRooTracker();
   giRooTracker->AddBranches(rooTrackerTree, true,
-                            GiBUUToStdHepOpts::HaveProdChargeInfo);
+                            GiBUUToStdHepOpts::HaveProdChargeInfo,
+                            GiBUUToStdHepOpts::IsElectronScattering);
 
   // Handle the fluxes first so that we know the relative normalisations
   for (size_t ff_it = 0; ff_it < GiBUUToStdHepOpts::FluxFilesToAdd.size();

@@ -1,6 +1,23 @@
 --- ./code/analysis/AnaEvent.f90	2016-07-11 11:30:52.598002611 +0100
 +++ ./code/analysis/AnaEvent.f90	2016-07-11 11:28:06.000848774 +0100
-@@ -2124,7 +2124,7 @@
+@@ -42,12 +42,14 @@
+   implicit none
+
+   PRIVATE
+-
++
+   logical                    :: debug=.false.
+   logical :: exclusive_meson
+
+   integer, parameter ,public:: dimSigma=120      ! number of possible channels
+-
++
++  integer, public:: raiseStep=0
++
+   !*************************************************************************
+   !****ig* AnaEvent/particleIDs_flag
+   ! SOURCE
+@@ -2124,7 +2126,7 @@
      integer, intent(in), optional :: specificEvent
 
      type(histogram) :: dsigma_dEnu, dsigma_dE,dsigma_dcos, dsigma_dQ2
@@ -9,7 +26,7 @@
      character(80) :: filename_Enu, filename_E,filename_cos,filename_Q2
      character(13) :: name
      real :: enu,  ekin, costheta, Q2, perweight
-@@ -2212,7 +2212,8 @@
+@@ -2212,7 +2214,8 @@
         end if
 
         if (pass) then
@@ -19,7 +36,7 @@
               write(*,*) 'error in getting perweight, stop'
               write(*,*) j,prod_id,perweight
               stop
-@@ -2421,10 +2422,10 @@
+@@ -2421,13 +2424,14 @@
      logical, optional              :: onlyFreeParticles
      logical, optional              :: writeNeutrinoProdID
      type(tParticleListNode),Pointer  :: pNode
@@ -33,7 +50,26 @@
      real :: perweight, enu
      real, dimension(0:3) :: lepIn_mom, lepton_mom, boson_mom, nuc_mom
      logical :: newline,onlyFree,printParticle,ex,NeutrinoProdID
-@@ -2452,7 +2453,7 @@
++    logical :: shouldAppend
+
+     if(present(onlyFreeParticles)) then
+        onlyFree=onlyFreeParticles
+@@ -2442,17 +2446,21 @@
+     end if
+
+
++    shouldAppend = (raiseStep>1).or.(run>1)
++
+     Inquire(file=filename,exist=ex)
+
+-    if (run>1 .and. ex) then
++    if (shouldAppend .and. ex) then
++      write(*,*) "Appending to ",filename
+       Open(47, file=filename, status='old', position='append')
+     else
++      write(*,*) "Overwriting ",filename
+       Open(47, file=filename, status='replace')
+       write(47,outA) '1:Run','2:Event','3:ID','4:Charge','5:perweight','6:position(1)', &
                       & '7:position(2)','8:position(3)',&
                       & '9:momentum(0)', '10:momentum(1)','11:momentum(2)','12:momentum(3)', &
                       & '13:history', '14:production_ID', &
@@ -42,7 +78,7 @@
      end if
 
      newline=.false.
-@@ -2473,14 +2474,14 @@
+@@ -2473,14 +2481,14 @@
            end if
 
            if(NeutrinoProdID) then
@@ -59,7 +95,7 @@
            else
               if(printParticle) write(47,outShort) run,i,pNode%V%ID,pNode%V%Charge, &
                    &  pNode%V%perweight,pNode%V%position &
-@@ -3036,7 +3037,7 @@
+@@ -3036,7 +3044,7 @@
                      & filename_Enurestored_versusEnu, filename_dSigdEnu, &
                      &  filename_dSigdEnurestored ! file names to write to
      type(tParticleListNode),Pointer       :: pNode
@@ -68,7 +104,7 @@
      real    :: Ehad, perweight
      real, dimension(0:3) :: lepIn_mom, lep_mom, boson_mom, nuc_mom
      integer :: Chrg_Nuc
-@@ -3084,7 +3085,8 @@
+@@ -3084,7 +3092,8 @@
 
         ! (1) Collect informations about boson in event "i"
         ! event:  prod_ID (1 to 34) , perweight, outgoing lepton and intermediate boson momenta
@@ -78,6 +114,7 @@
            write(*,*) 'error in getting production info, stop'
            stop
         end if
+
 --- ./code/analysis/neutrinoAnalysis.f90	2016-07-11 11:30:52.599085895 +0100
 +++ ./code/analysis/neutrinoAnalysis.f90	2016-07-11 11:29:01.579814589 +0100
 @@ -1229,7 +1229,7 @@
@@ -456,3 +493,21 @@
      case (hiLepton)
        if (.not. present(iFE)) return
        if (EventInfo_HiLep_Get (0,iFE,Weight,nu,Q2,eps,evtType,phi_Lepton=phiL)) &
+--- ./code/GiBUU.f90      (revision 7065)
++++ ./code/GiBUU.f90      (working copy)
+@@ -68,6 +68,7 @@
+   use random, only: setRandom
+   use particleProperties, only: initParticleProperties
+   use checks, only: ChecksSetDefaulSwitches
++  use AnaEvent, only: raiseStep
+
+   implicit none
+
+@@ -149,6 +150,7 @@
+
+   energyLoop: Do j=1,num_Energies         ! loop over different energies
+      write(*,format1) 'Energy loop :',j,num_Energies
++     raiseStep = j
+
+      subsequentRunsLoop: Do k=1,num_runs_SameEnergy   ! loop over subsequent runs
+         write(*,format2) 'Run loop :',k,num_runs_SameEnergy
