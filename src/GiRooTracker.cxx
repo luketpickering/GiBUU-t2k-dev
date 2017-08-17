@@ -33,10 +33,6 @@ void GiRooTracker::Reset() {
   StdHepN = 0;
   GiBUUPerWeight = 1.0;
 
-  SpeciesWght_numu = 0.0;
-  SpeciesWght_nue = 0.0;
-  SpeciesWght = 0.0;
-
   Utils::ClearPointer(StdHepPdg, kGiStdHepNPmax);
   Utils::ClearPointer(StdHepStatus, kGiStdHepNPmax);
   Utils::ClearPointer(GiBHepHistory, kGiStdHepNPmax);
@@ -64,11 +60,6 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
   tree->Branch("NumRunsWeight", &NumRunsWeight, "NumRunsWeight/D");
   tree->Branch("FileExtraWeight", &FileExtraWeight, "FileExtraWeight/D");
   tree->Branch("EvtWght", &EvtWght, "EvtWght/D");
-  if (!IsElectronScattering) {
-    tree->Branch("SpeciesWght_numu", &SpeciesWght_numu, "SpeciesWght_numu/D");
-    tree->Branch("SpeciesWght_nue", &SpeciesWght_nue, "SpeciesWght_nue/D");
-    tree->Branch("SpeciesWght", &SpeciesWght, "SpeciesWght/D");
-  }
 
   if (AddHistory) {
     tree->Branch("GiBHepHistory", GiBHepHistory, "GiBHepHistory[StdHepN]/L");

@@ -60,13 +60,6 @@ extern std::vector<double> NFilesAddedWeights;
 ///
 /// Useful for building composite targets.
 extern double OverallWeight;
-///\brief An extra weight to apply to all event induced by neutrinos of a given
-/// species.
-///
-/// This can be used to correctly combine multiple neutrino species into a
-/// single measurement. e.g. mu- mu+ measurement in an FHC flux with a
-/// wrong-sign background component.
-extern std::map<int, double> CompositeFluxWeight;
 
 ///\brief Whether the GiBUU output contains the neutrino-induced hadronic
 /// particles charge.

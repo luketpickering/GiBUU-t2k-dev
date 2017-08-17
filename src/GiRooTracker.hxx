@@ -113,19 +113,6 @@ struct GiRooTracker {
   ///\brief The total XSec weighting that should be applied to this event.
   Double_t EvtWght;
 
-  ///\brief Weighting which takes account of multiple input numu species.
-  ///
-  /// Defined such that W_numu + W_numubar = 1
-  Double_t SpeciesWght_numu;
-  ///\brief Weighting which takes account of multiple input nue species.
-  ///
-  /// Defined such that W_nue + W_nuebar = 1
-  Double_t SpeciesWght_nue;
-  ///\brief Weighting which takes account of multiple input neutrino species.
-  ///
-  /// Defined such that \Sum_species W_species = 1
-  Double_t SpeciesWght;
-
   ///\brief Function to reset an instance of this class to its default state.
   ///
   /// Used between fillings to result any values to default.

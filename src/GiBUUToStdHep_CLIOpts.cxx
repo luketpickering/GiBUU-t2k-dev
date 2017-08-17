@@ -218,7 +218,7 @@ bool Handle_nuPDG(std::string const &opt) {
     return false;
   }
 
-  switch (ival) {
+  switch (abs(ival)) {
     case 12:
     case 14:
     case 16:

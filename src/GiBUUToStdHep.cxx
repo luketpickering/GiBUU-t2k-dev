@@ -22,6 +22,14 @@
 #include "GiRooTracker.hxx"
 
 std::map<int, double> FluxComponentIntegrals;
+std::map<int, TH1D *> FluxHists;
+std::map<int, TH1D *> SigmaHists;
+std::map<int, TH1D *> EvHists;
+
+double DomFCI = std::numeric_limits<double>::min();
+int DomPDG = 0;
+TH1D *DomFlux = NULL;
+TH1D *DomEvt = NULL;
 
 GiBUUPartBlob GetParticleLine(std::string const &line) {
   GiBUUPartBlob pblob;
@@ -109,17 +117,6 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
     // neutrino
     giRooTracker->StdHepPdg[0] = FileNuType;
 
-    giRooTracker->SpeciesWght_numu =
-        (abs(FileNuType) == 14)
-            ? GiBUUToStdHepOpts::CompositeFluxWeight[FileNuType + 100]
-            : 0;
-    giRooTracker->SpeciesWght_nue =
-        (abs(FileNuType) == 12)
-            ? GiBUUToStdHepOpts::CompositeFluxWeight[FileNuType + 100]
-            : 0;
-    giRooTracker->SpeciesWght =
-        GiBUUToStdHepOpts::CompositeFluxWeight[FileNuType];
-
     giRooTracker->StdHepStatus[0] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
@@ -156,6 +153,16 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
     giRooTracker->FileExtraWeight = FileExtraWeight;
     giRooTracker->EvtWght = giRooTracker->GiBUUPerWeight * TotalEventReweight *
                             (GiBUUToStdHepOpts::IsElectronScattering ? 1E5 : 1);
+
+    if (FluxHists.count(FileNuType)) {
+      SigmaHists[FileNuType]->Fill(ev.front().Enu, giRooTracker->EvtWght);
+      EvHists[FileNuType]->Fill(
+          ev.front().Enu,
+          giRooTracker->EvtWght * FluxComponentIntegrals[FileNuType]);
+    }
+    if (FileNuType == DomPDG) {
+      DomEvt->Fill(ev.front().Enu, giRooTracker->EvtWght * DomFCI);
+    }
 
     giRooTracker->StdHepN = 2;
 
@@ -410,7 +417,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
         // Flush events every 50k events
         if (FileEvents.size() == 5E4) {
           NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber,
-                                      NRunsInFile, FileEvents);
+                                          NRunsInFile, FileEvents);
         }
       }
       CurrEv.push_back(part);
@@ -428,7 +435,7 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
     // Flush events every 10k events
     if (FileEvents.size()) {
       NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber,
-                                  NRunsInFile, FileEvents);
+                                      NRunsInFile, FileEvents);
     }
 
     ifs.close();  // Read all the lines.
@@ -444,6 +451,28 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
   }
 
   UDBInfo("Saved " << NumEvs << " events.");
+
+  for (std::map<int, TH1D *>::iterator h_it = SigmaHists.begin();
+       h_it != SigmaHists.end(); ++h_it) {
+    for (int bi_it = 1; bi_it < h_it->second->GetXaxis()->GetNbins() + 1;
+         ++bi_it) {
+      double ENuBWidth = FluxHists[h_it->first]->GetXaxis()->GetBinWidth(bi_it);
+      double NNu = FluxHists[h_it->first]->GetBinContent(bi_it) * ENuBWidth;
+      if (NNu < std::numeric_limits<double>::min()) {
+        continue;
+      }
+      h_it->second->SetBinContent(bi_it,
+                                  h_it->second->GetBinContent(bi_it) / NNu);
+      h_it->second->SetBinError(bi_it, h_it->second->GetBinError(bi_it) / NNu);
+    }
+
+    EvHists[h_it->first]->Scale(1,"width");
+    EvHists[h_it->first]->Scale(NumEvs);
+  }
+  DomEvt->Scale(1,"width");
+  DomEvt->Write("evt_per_NEvents");
+  DomEvt->Scale(NumEvs);
+
   return 0;
 }
 
@@ -462,13 +491,8 @@ int GetPDGFromHistName(std::string const &histname) {
 }
 
 std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
-                                                 std::string const &histname) {
-  int pdgfromhistname = GetPDGFromHistName(histname);
-  if (!pdgfromhistname) {
-    UDBWarn("Failed to parse the correct species from histname:\"" << histname
-                                                                   << "\"");
-    return std::pair<double, double>(0, 0);
-  }
+                                                 std::string const &histname,
+                                                 int pdgfromhistname) {
   if (FluxComponentIntegrals.count(pdgfromhistname)) {
     UDBWarn("Already read a flux file for hist: " << histname
                                                   << ", overwriting.");
@@ -503,6 +527,9 @@ std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
   double fi;
   std::string IntegString = fln.substr(22, wi_it - (22));
   try {
+    IntegString.erase(
+        remove_if(IntegString.begin(), IntegString.end(), isspace),
+        IntegString.end());
     fi = Utils::str2d(IntegString, true);
   } catch (std::exception const &e) {
     UDBWarn("Input flux file integral comment (\""
@@ -520,6 +547,9 @@ std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
   double fci;
   IntegString = fln.substr(wi_it + 17, end_bracket - (wi_it + 17));
   try {
+    IntegString.erase(
+        remove_if(IntegString.begin(), IntegString.end(), isspace),
+        IntegString.end());
     fci = Utils::str2d(IntegString, true);
   } catch (std::exception const &e) {
     UDBWarn("Input flux file width integral comment (\""
@@ -537,6 +567,11 @@ std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
 
   FluxComponentIntegrals[pdgfromhistname] = fci;
 
+  if (fci > DomFCI) {
+    DomFCI = fci;
+    DomPDG = pdgfromhistname;
+  }
+
   return std::pair<double, double>(fi, fci);
 }
 
@@ -548,13 +583,20 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   }
   std::string line;
 
+  int pdgfromhistname = GetPDGFromHistName(histname);
+  if (!pdgfromhistname) {
+    UDBError("Failed to parse the correct species from histname:\"" << histname
+                                                                    << "\"");
+    throw;
+  }
+
   size_t ln = 0;
   std::vector<std::pair<double, double> > FluxValues;
   std::pair<double, double> FluxIntegrals(0, 0);
   while (std::getline(ifs, line)) {
     if (line[0] == '#') {  // ignore comments
       if (ln == 0) {
-        FluxIntegrals = HandleFluxIntegralLine(line, histname);
+        FluxIntegrals = HandleFluxIntegralLine(line, histname, pdgfromhistname);
       }
       ln++;
       continue;
@@ -587,98 +629,39 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
                                    (FluxValues[FluxValues.size() - 1].first -
                                     BinLowEdges[FluxValues.size() - 1]);
 
-  TH1D *fluxHist = new TH1D(
-      histname.c_str(), (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.)").c_str(),
+  FluxHists[pdgfromhistname] =
+      new TH1D(histname.c_str(),
+               (histname + ";#it{E}_{#nu} (GeV);#Phi (A.U.) per GeV").c_str(),
+               FluxValues.size(), BinLowEdges);
+
+  SigmaHists[pdgfromhistname] = new TH1D(
+      (histname + "_xsec").c_str(),
+      (histname + ";#it{E}_{#nu} (GeV);#sigma(E_{#nu}) (cm^{2} nucleon^{-1})")
+          .c_str(),
       FluxValues.size(), BinLowEdges);
+  EvHists[pdgfromhistname] =
+      new TH1D((histname + "_evrate").c_str(),
+               (histname + ";#it{E}_{#nu} (GeV);Events (A.U.) per GeV").c_str(),
+               FluxValues.size(), BinLowEdges);
   delete BinLowEdges;
 
-  for (Int_t bin_it = 1; bin_it < fluxHist->GetNbinsX() + 1; bin_it++) {
-    fluxHist->SetBinContent(bin_it, FluxValues[bin_it - 1].second);
+  for (Int_t bin_it = 1; bin_it < FluxHists[pdgfromhistname]->GetNbinsX() + 1;
+       bin_it++) {
+    FluxHists[pdgfromhistname]->SetBinContent(bin_it,
+                                              FluxValues[bin_it - 1].second);
   }
 
-  if (FluxIntegrals.first > 1E-8) {
-    fluxHist->Scale(1. / fluxHist->Integral());
-    fluxHist->Scale(FluxIntegrals.first);
+  if (FluxIntegrals.first > std::numeric_limits<double>::min()) {
+    FluxHists[pdgfromhistname]->Scale(1. /
+                                      FluxHists[pdgfromhistname]->Integral());
+    FluxHists[pdgfromhistname]->Scale(FluxIntegrals.first);
   }
 
-  fluxHist->Write();
-}
-
-void SetFluxSpeciesWeights() {
-  if (!FluxComponentIntegrals.count(14)) {
-    FluxComponentIntegrals[14] = 0;
-  }
-  if (!FluxComponentIntegrals.count(-14)) {
-    FluxComponentIntegrals[-14] = 0;
-  }
-  if (!FluxComponentIntegrals.count(12)) {
-    FluxComponentIntegrals[12] = 0;
-  }
-  if (!FluxComponentIntegrals.count(-12)) {
-    FluxComponentIntegrals[-12] = 0;
-  }
-
-  if (FluxComponentIntegrals[14]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[14] =
-        FluxComponentIntegrals[14] /
-        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
-         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[14] = 0;
-  }
-  if (FluxComponentIntegrals[-14]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-14] =
-        FluxComponentIntegrals[-14] /
-        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
-         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-14] = 0;
-  }
-  if (FluxComponentIntegrals[14]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[14 + 100] =
-        FluxComponentIntegrals[14] /
-        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[14 + 100] = 0;
-  }
-  if (FluxComponentIntegrals[-14]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-14 + 100] =
-        FluxComponentIntegrals[-14] /
-        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-14 + 100] = 0;
-  }
-
-  if (FluxComponentIntegrals[12]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[12] =
-        FluxComponentIntegrals[12] /
-        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
-         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[12] = 0;
-  }
-  if (FluxComponentIntegrals[-12]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-12] =
-        FluxComponentIntegrals[-12] /
-        (FluxComponentIntegrals[14] + FluxComponentIntegrals[-14] +
-         FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-12] = 0;
-  }
-  if (FluxComponentIntegrals[12]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[12 + 100] =
-        FluxComponentIntegrals[12] /
-        (FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[12 + 100] = 0;
-  }
-  if (FluxComponentIntegrals[-12]) {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-12 + 100] =
-        FluxComponentIntegrals[-12] /
-        (FluxComponentIntegrals[12] + FluxComponentIntegrals[-12]);
-  } else {
-    GiBUUToStdHepOpts::CompositeFluxWeight[-12 + 100] = 0;
-  }
+  std::cout << "Input integrals: " << FluxIntegrals.first << ", "
+            << FluxIntegrals.second
+            << ". Histo integrals: " << FluxHists[pdgfromhistname]->Integral()
+            << ", " << FluxHists[pdgfromhistname]->Integral("width")
+            << std::endl;
 }
 
 int GiBUUToStdHep() {
@@ -700,7 +683,10 @@ int GiBUUToStdHep() {
     SaveFluxFile(GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].second,
                  GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].first);
   }
-  SetFluxSpeciesWeights();
+  if (DomPDG) {
+    DomFlux = static_cast<TH1D *>(FluxHists[DomPDG]->Clone("flux"));
+    DomEvt = static_cast<TH1D *>(EvHists[DomPDG]->Clone("evt"));
+  }
 
   int ParserRtnCode = 0;
   ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
