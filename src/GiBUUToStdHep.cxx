@@ -466,12 +466,18 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
       h_it->second->SetBinError(bi_it, h_it->second->GetBinError(bi_it) / NNu);
     }
 
-    EvHists[h_it->first]->Scale(1,"width");
+    EvHists[h_it->first]->Scale(1, "width");
     EvHists[h_it->first]->Scale(NumEvs);
   }
-  DomEvt->Scale(1,"width");
-  DomEvt->Write("evt_per_NEvents");
-  DomEvt->Scale(NumEvs);
+  if (DomEvt) {
+    DomEvt->Scale(1, "width");
+    DomEvt->Write("evt_per_NEvents");
+    std::string name = DomEvt->GetName();
+    std::string title = DomEvt->GetTitle();
+    DomEvt = static_cast<TH1D *>(FluxHists[DomPDG]->Clone());
+    DomEvt->SetNameTitle(name.c_str(), title.c_str());
+    DomEvt->Scale(NumEvs);
+  }
 
   return 0;
 }

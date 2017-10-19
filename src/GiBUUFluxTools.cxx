@@ -19,16 +19,23 @@ bool TextInput = true;
 bool DoPDF = false;
 bool DoUnitNormalise = false;
 std::string InputTHName = "";
+
+bool doRebin = false;
+size_t NBins;
+double BinL, BinH;
 }
 
 int WriteFile(float *BinCenters, float *BinWidths, float *BinValues,
               size_t NBins) {
   float Integral = 0;
   float WidthIntegral = 0;
-  for (size_t i = 0; Opts::DoPDF && (i < NBins); ++i) {
+  for (size_t i = 0; (i < NBins); ++i) {
     Integral += BinValues[i];
     WidthIntegral += BinWidths[i] * BinValues[i];
   }
+
+  std::cout << "Integral: " << Integral << ", Width Integral: " << WidthIntegral
+            << std::endl;
 
   std::ofstream of(Opts::OutputFName.c_str());
   of << "# input flux integral: " << Integral
@@ -60,12 +67,33 @@ int ROOTTH_ToBinCenterPDFFlux_Text() {
               << " ROOT file for reading." << std::endl;
     return 1;
   }
-  TH1 *inph = dynamic_cast<TH1 *>(inpf->Get(Opts::InputTHName.c_str()));
+  TH1 *inph =
+      dynamic_cast<TH1 *>(inpf->Get(Opts::InputTHName.c_str())->Clone());
   if (!inph) {
     std::cerr << "[ERROR]: ROOT file " << Opts::InputFName
               << " does not appear to contain a TH1 named: "
               << Opts::InputTHName << std::endl;
     return 2;
+  }
+
+  if (Opts::doRebin) {
+    if (Opts::DoPDF) {
+      inph->Scale(1, "width");
+
+      // If the input histo is not a PDF, divide by bw before rebinning.
+      Opts::DoPDF = false;
+      Opts::DoUnitNormalise = true;
+    }
+
+    TH1D *rb = new TH1D("rebin", "", Opts::NBins, Opts::BinL, Opts::BinH);
+
+    for (Int_t bi_it = 1; bi_it < rb->GetXaxis()->GetNbins() + 1; ++bi_it) {
+      rb->SetBinContent(bi_it,
+                        inph->Interpolate(rb->GetXaxis()->GetBinCenter(bi_it)));
+    }
+    inph->SetDirectory(NULL);
+    delete inph;
+    inph = rb;
   }
 
   float *BinCenters = new float[inph->GetXaxis()->GetNbins()];
@@ -205,6 +233,29 @@ bool Handle_ValueBin(std::string const &opt) {
   std::cout << "\t--Value column : " << Opts::ValueColumn << std::endl;
   return true;
 }
+
+bool Handle_Rebin(std::string const &opt) {
+  std::vector<std::string> args = Utils::SplitStringByDelim(opt, ",");
+  if (args.size() != 3) {
+    std::cout << "--Expected -U argument in the form <NBins>,<BinLow>,<BinHigh>"
+              << std::endl;
+    return false;
+  }
+
+  try {
+    Opts::NBins = Utils::str2i(args[0]);
+    Opts::BinL = Utils::str2d(args[1]);
+    Opts::BinH = Utils::str2d(args[2]);
+  } catch (...) {
+    return false;
+  }
+
+  std::cout << "\t--Rebinning : " << Opts::NBins << ", " << Opts::BinL << ", "
+            << Opts::BinH << std::endl;
+  Opts::doRebin = true;
+  return true;
+}
+
 bool Handle_InputTexFile(std::string const &opt) {
   Opts::InputFName = opt;
   Opts::TextInput = true;
@@ -358,6 +409,11 @@ bool HandleArgs(int argc, char const *argv[]) {
 
     if (("-n" == arg) || ("--unit-normalise" == arg)) {
       LastArgOkay = Handle_UnitNorm(opt);
+      continue;
+    }
+
+    if (("-U" == arg) || ("--rebin-uniform" == arg)) {
+      LastArgOkay = Handle_Rebin(opt);
       continue;
     }
 
