@@ -701,6 +701,7 @@ int GiBUUToStdHep() {
     TH1D *eFlux = new TH1D("e_flux", "e_flux", 100, 0,
                            2 * GiBUUToStdHepOpts::EScatteringInputEnergy);
     eFlux->Fill(GiBUUToStdHepOpts::EScatteringInputEnergy);
+    eFlux->Write("flux");
   }
 
   rooTrackerTree->Write();
