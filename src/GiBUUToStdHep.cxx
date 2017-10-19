@@ -689,6 +689,21 @@ int GiBUUToStdHep() {
     SaveFluxFile(GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].second,
                  GiBUUToStdHepOpts::FluxFilesToAdd[ff_it].first);
   }
+  if (GiBUUToStdHepOpts::IsElectronScattering) {
+    DomPDG = 11;
+
+    FluxHists[DomPDG] = new TH1D("e_flux", "e_flux", 100, 0,
+                                 2 * GiBUUToStdHepOpts::EScatteringInputEnergy);
+    FluxHists[DomPDG]->Fill(GiBUUToStdHepOpts::EScatteringInputEnergy);
+
+    EvHists[DomPDG] = static_cast<TH1D *>(FluxHists[DomPDG]->Clone("e_evt"));
+    SigmaHists[DomPDG] =
+        static_cast<TH1D *>(FluxHists[DomPDG]->Clone("e_xsec"));
+
+    EvHists[DomPDG]->Reset();
+    SigmaHists[DomPDG]->Reset();
+  }
+
   if (DomPDG) {
     DomFlux = static_cast<TH1D *>(FluxHists[DomPDG]->Clone("flux"));
     DomEvt = static_cast<TH1D *>(EvHists[DomPDG]->Clone("evt"));
@@ -696,13 +711,6 @@ int GiBUUToStdHep() {
 
   int ParserRtnCode = 0;
   ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
-
-  if (GiBUUToStdHepOpts::IsElectronScattering) {
-    TH1D *eFlux = new TH1D("e_flux", "e_flux", 100, 0,
-                           2 * GiBUUToStdHepOpts::EScatteringInputEnergy);
-    eFlux->Fill(GiBUUToStdHepOpts::EScatteringInputEnergy);
-    eFlux->Write("flux");
-  }
 
   rooTrackerTree->Write();
 
