@@ -120,7 +120,11 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
     giRooTracker->StdHepStatus[0] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
-    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] = ev.front().Enu;
+    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] =
+        GiBUUToStdHepOpts::IsElectronScattering
+            ? sqrt(ev.front().Enu * ev.front().Enu -
+                   511 * PhysConst::KeV * 511 * PhysConst::KeV)
+            : ev.front().Enu;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().Enu;
 
     if (GiBUUToStdHepOpts::EScatteringInputEnergy = 0xdeadbeef) {

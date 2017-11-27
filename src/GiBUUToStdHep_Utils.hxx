@@ -18,6 +18,11 @@
 
 #include "GiBUUToStdHep_CLIOpts.hxx"
 
+namespace PhysConst {
+  double const MeV = 1E-3;
+  double const KeV = 1E-6;
+}
+
 /// Utilities which may be helpful for processing GiBUU specific output.
 namespace GiBUUUtils {
 
