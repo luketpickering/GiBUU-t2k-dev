@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "LUtils/Debugging.hxx"
+#include "LUtils/Utils.hxx"
 
 #include "GiBUUToStdHep_Utils.hxx"
 
@@ -1223,4 +1224,144 @@ int GiBUU2NeutReacCode_escat(Int_t GiBUUCode,
 
   return 0;
 }
+}
+
+LHVectorReader::LHVectorReader(std::string const &FileName)
+    : xmlengine(),
+      xmldoc(NULL),
+      evptr(NULL),
+      ReadFile(false),
+      NEvents(0),
+      NEventsRead(0) {
+  xmlengine.SetSkipComments();
+  OpenLHDoc(FileName);
+}
+
+void LHVectorReader::OpenLHDoc(std::string const &FileName) {
+  xmldoc = xmlengine.ParseFile(FileName.c_str());
+
+  if (!xmldoc) {
+    UDBError("TXMLEngine could not parse file: \"" << FileName << "\"");
+    throw;
+  }
+
+  UDBLog("Successfully loaded XML document from file: " << FileName << ".");
+  CountEvents();
+  SetFirstEventNode();
+}
+
+void LHVectorReader::CloseDoc() {
+  xmlengine.FreeDoc(xmldoc);
+  UDBLog("Destroyed XML document.");
+}
+
+void LHVectorReader::SetFirstEventNode() {
+  XMLNodePointer_t rootNode = xmlengine.DocGetRootElement(xmldoc);
+  for (XMLNodePointer_t childNode_ptr = xmlengine.GetChild(rootNode);
+       (childNode_ptr != NULL);
+       childNode_ptr = xmlengine.GetNext(childNode_ptr)) {
+    if (std::string(xmlengine.GetNodeName(childNode_ptr)) != "event") {
+      continue;
+    }
+    evptr = childNode_ptr;
+    return;
+  }
+
+  UDBError("Failed to find any event tags in input Les Houches file.");
+  throw;
+}
+
+void LHVectorReader::NextEventNode() {
+  for (XMLNodePointer_t childNode_ptr = xmlengine.GetNext(evptr);
+       (childNode_ptr != NULL);
+       childNode_ptr = xmlengine.GetNext(childNode_ptr)) {
+    if (std::string(xmlengine.GetNodeName(childNode_ptr)) != "event") {
+      std::cout << "Skipping node: " << xmlengine.GetNodeName(childNode_ptr)
+                << std::endl;
+      continue;
+    }
+    evptr = childNode_ptr;
+    return;
+  }
+  evptr = NULL;
+}
+
+size_t LHVectorReader::CountEvents() {
+  if (NEvents != 0) {
+    return NEvents;
+  }
+
+  XMLNodePointer_t rootNode = xmlengine.DocGetRootElement(xmldoc);
+  for (XMLNodePointer_t childNode_ptr = xmlengine.GetChild(rootNode);
+       (childNode_ptr != NULL);
+       childNode_ptr = xmlengine.GetNext(childNode_ptr)) {
+    if (std::string(xmlengine.GetNodeName(childNode_ptr)) == "event") {
+      NEvents++;
+    }
+  }
+
+  return NEvents;
+}
+
+bool LHVectorReader::EOV() { return (evptr == NULL); }
+
+std::vector<GiBUUPartBlob> LHVectorReader::ReadEvent() {
+  if (EOV()) {
+    return std::vector<GiBUUPartBlob>();
+  }
+
+  std::vector<GiBUUPartBlob> event;
+
+  std::vector<std::string> event_lines =
+      Utils::SplitStringByDelim(xmlengine.GetNodeContent(evptr), "\n");
+
+  std::vector<std::string> FSLep_str =
+      Utils::SplitStringByDelim(event_lines.back(), " \t");
+
+  GiBUUPartBlob FSLep;
+  FSLep.Run = 1;
+  FSLep.EvNum = NEventsRead + 1;
+  FSLep.ID = 0;
+  FSLep.PerWeight = Utils::str2d(FSLep_str[3]);
+  FSLep.FourMom =
+      TLorentzVector(Utils::str2d(FSLep_str[9]), Utils::str2d(FSLep_str[10]),
+                     Utils::str2d(FSLep_str[11]), Utils::str2d(FSLep_str[8]));
+  FSLep.Prodid = Utils::str2i(FSLep_str[2]);
+  FSLep.EProbe = Utils::str2d(FSLep_str[4]);
+  FSLep.IDIsPDG = true;
+  event.push_back(FSLep);
+
+  UDBVerbose(
+      "LH Event: " << Utils::SplitStringByDelim(event_lines.front(), " \t"));
+  UDBVerbose("\t" << FSLep);
+
+  int NFSHadr = (int(event_lines.size()) - 2);
+  if (NFSHadr) {
+    for (size_t ln = 1; event_lines.size() && (ln < (event_lines.size() - 1));
+         ++ln) {
+      std::vector<std::string> FSHadr_str =
+          Utils::SplitStringByDelim(event_lines[ln], " \t");
+
+      GiBUUPartBlob FSHadr;
+      FSHadr.Run = 1;
+      FSHadr.EvNum = NEventsRead + 1;
+      FSHadr.ID = Utils::str2i(FSHadr_str[0]);
+      FSHadr.FourMom = TLorentzVector(
+          Utils::str2d(FSHadr_str[6]), Utils::str2d(FSHadr_str[7]),
+          Utils::str2d(FSHadr_str[8]), Utils::str2d(FSHadr_str[9]));
+      FSHadr.IDIsPDG = true;
+
+      UDBVerbose("\t" << FSHadr);
+      event.push_back(FSHadr);
+    }
+  }
+  NextEventNode();
+  NEventsRead++;
+  return event;
+}
+
+LHVectorReader::~LHVectorReader() {
+  if (xmldoc) {
+    CloseDoc();
+  }
 }

@@ -20,7 +20,7 @@ bool HaveStruckNucleonInfo;
 bool IsElectronScattering = false;
 bool FilesFromSameRun = false;
 double EScatteringInputEnergy;
-std::vector<int> nuTypes;
+std::vector<int> ProbeTypes;
 std::vector<int> TargetAs;
 std::vector<int> TargetZs;
 std::vector<bool> CCFiles;
@@ -41,7 +41,7 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
   if (AsteriskPos == std::string::npos) {
     UDBLog("\t--Adding file: " << OptVal);
     GiBUUToStdHepOpts::InpFNames.push_back(OptVal);
-    GiBUUToStdHepOpts::nuTypes.push_back(NuType);
+    GiBUUToStdHepOpts::ProbeTypes.push_back(NuType);
     GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
     GiBUUToStdHepOpts::TargetZs.push_back(TargetZ);
     GiBUUToStdHepOpts::CCFiles.push_back(IsCC);
@@ -89,7 +89,7 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
                << ", A: " << TargetA << ", Z: " << TargetZ
                << ", TW: " << FileExtraWeight << ", IsCC: " << IsCC << ")");
         GiBUUToStdHepOpts::InpFNames.push_back((dirpath + ent->d_name));
-        GiBUUToStdHepOpts::nuTypes.push_back(NuType);
+        GiBUUToStdHepOpts::ProbeTypes.push_back(NuType);
         GiBUUToStdHepOpts::TargetAs.push_back(TargetA);
         GiBUUToStdHepOpts::TargetZs.push_back(TargetZ);
         GiBUUToStdHepOpts::CCFiles.push_back(IsCC);
@@ -104,7 +104,7 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
         GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0 /
                                                         double(NFilesAdded));
       } else {
-         GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0);
+        GiBUUToStdHepOpts::NFilesAddedWeights.push_back(1.0);
       }
     }
     if (NFilesAdded) {
@@ -142,7 +142,7 @@ bool Handle_CompositeExample(std::string const &opt) {
   exit(0);
 }
 
-bool Handle_FEFile(std::string const &opt) {
+bool Handle_InputFile(std::string const &opt) {
   bool IsCC = true;
   // If specified as NC take that, otherwise, assume CC
   if (GiBUUToStdHepOpts::CCFiles.size() > GiBUUToStdHepOpts::InpFNames.size()) {
@@ -150,7 +150,7 @@ bool Handle_FEFile(std::string const &opt) {
     GiBUUToStdHepOpts::CCFiles.pop_back();
   }
 
-  if ((!GiBUUToStdHepOpts::nuTypes.size()) ||
+  if ((!GiBUUToStdHepOpts::ProbeTypes.size()) ||
       (!GiBUUToStdHepOpts::TargetAs.size()) ||
       (!GiBUUToStdHepOpts::TargetZs.size())) {
     if (GiBUUToStdHepOpts::IsElectronScattering) {
@@ -169,14 +169,15 @@ bool Handle_FEFile(std::string const &opt) {
          << opt << "\"");
 
   // Assume previous or latest specified otherwise.
-  int NuType = GiBUUToStdHepOpts::nuTypes.back();
+  int NuType = GiBUUToStdHepOpts::ProbeTypes.back();
   int TargetA = GiBUUToStdHepOpts::TargetAs.back();
   int TargetZ = GiBUUToStdHepOpts::TargetZs.back();
 
   // These get added back by AddFiles so that the number of files and
   // options are synched
-  if (GiBUUToStdHepOpts::nuTypes.size() > GiBUUToStdHepOpts::InpFNames.size()) {
-    GiBUUToStdHepOpts::nuTypes.pop_back();
+  if (GiBUUToStdHepOpts::ProbeTypes.size() >
+      GiBUUToStdHepOpts::InpFNames.size()) {
+    GiBUUToStdHepOpts::ProbeTypes.pop_back();
   }
   if (GiBUUToStdHepOpts::TargetAs.size() >
       GiBUUToStdHepOpts::InpFNames.size()) {
@@ -211,7 +212,8 @@ bool Handle_nuPDG(std::string const &opt) {
     return false;
   }
 
-  if (GiBUUToStdHepOpts::nuTypes.size() > GiBUUToStdHepOpts::InpFNames.size()) {
+  if (GiBUUToStdHepOpts::ProbeTypes.size() >
+      GiBUUToStdHepOpts::InpFNames.size()) {
     UDBError(
         "Found another -u option before "
         "the next file has been specified.");
@@ -233,7 +235,7 @@ bool Handle_nuPDG(std::string const &opt) {
   }
 
   UDBLog("\t--Assuming next file has Nu PDG: " << ival);
-  GiBUUToStdHepOpts::nuTypes.push_back(ival);
+  GiBUUToStdHepOpts::ProbeTypes.push_back(ival);
 
   // Set default flux weights, these will be filled in if
   // input fluxes are specified for these species.
@@ -248,7 +250,7 @@ bool Handle_nuPDG(std::string const &opt) {
 bool Handle_eScat(std::string const &opt) {
   UDBLog("\t--Assuming all files contains electron scattering events.");
   GiBUUToStdHepOpts::IsElectronScattering = true;
-  GiBUUToStdHepOpts::nuTypes.push_back(11);
+  GiBUUToStdHepOpts::ProbeTypes.push_back(11);
   return true;
 }
 
@@ -466,15 +468,15 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
 
-    if (("-f" == arg) || ("--FEinput-file" == arg)) {
+    if (("-f" == arg) || ("--Input-file" == arg)) {
       if (opt_it == ArgArray.size()) {
         UDBError("Parameter  expected an option.");
         SayRunLike(argv);
         exit(1);
       }
       opt = ArgArray[opt_it++];
-      LastArgOkay = Handle_FEFile(opt);
-      //Reset after adding some files.
+      LastArgOkay = Handle_InputFile(opt);
+      // Reset after adding some files.
       GiBUUToStdHepOpts::FilesFromSameRun = false;
       requiredArguments |= 1;
       continue;
@@ -509,7 +511,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
       continue;
     }
     if (("-e" == arg) || ("--e-scattering" == arg)) {
-      if (GiBUUToStdHepOpts::nuTypes.size()) {
+      if (GiBUUToStdHepOpts::ProbeTypes.size()) {
         UDBError(
             "Already passed a -u option to specify neutrino species, cannot "
             "also pass -e.");
@@ -646,7 +648,11 @@ void SayRunLike(char const *argv[]) {
       << "\n\t[Arg]: (-c|--CompositeExample)"
       << "\n\t[Arg]: (-s|--same-run) Don't automatically average over "
          "NFilesAdded for the next -f arg."
-      << "\n\t[Arg]: (-f|--FEinput-file) <File Name> [Required]"
+      << "\n\t[Arg]: (-f|--Input-file) <File Name> [Required] Can be a "
+         "FinalEvents.dat-style or a Les Houches-style GiBUU vector. The "
+         "filename can contain a wild card, N.B. that if it does the filename "
+         "must be quoted to stop shell expansion, e.g. '-f "
+         "\"EventOutput.Pert.*.lhe\"'."
       << "\n\t[Arg]: (-o|--output-file) <File Name "
          "{default:GiBUURooTracker.root}>"
       << "\n\t[Arg]: (-u|--nu-pdg) <Next file neutrino PDG code> [Required or "

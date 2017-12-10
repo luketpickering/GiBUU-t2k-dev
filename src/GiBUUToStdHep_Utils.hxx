@@ -15,12 +15,13 @@
 #include "Rtypes.h"
 #include "TLorentzVector.h"
 #include "TVector3.h"
+#include "TXMLEngine.h"
 
 #include "GiBUUToStdHep_CLIOpts.hxx"
 
 namespace PhysConst {
-  double const MeV = 1E-3;
-  double const KeV = 1E-6;
+double const MeV = 1E-3;
+double const KeV = 1E-6;
 }
 
 /// Utilities which may be helpful for processing GiBUU specific output.
@@ -188,7 +189,6 @@ int GiBUU2NeutReacCode(Int_t GiBUUCode, Int_t const *const StdHepPDGArray,
 /// From https://gibuu.hepforge.org/trac/wiki/LesHouches
 int GiBUU2NeutReacCode_escat(Int_t GiBUUCode,
                              Int_t const *const StdHepPDGArray);
-
 }
 
 template <typename T>
@@ -232,9 +232,10 @@ struct GiBUUPartBlob {
         FourMom(0, 0, 0, 0),
         History(0),
         Prodid(0),
-        Enu(0),
+        EProbe(0),
         ProdCharge(0),
-        ln(0) {}
+        ln(0),
+        IDIsPDG(false) {}
   Int_t Run;
   Int_t EvNum;
   Int_t ID;
@@ -244,9 +245,10 @@ struct GiBUUPartBlob {
   TLorentzVector FourMom;
   Long_t History;
   Int_t Prodid;
-  Double_t Enu;
+  Double_t EProbe;
   Int_t ProdCharge;
   Int_t ln;
+  bool IDIsPDG;
 };
 
 namespace {
@@ -255,13 +257,56 @@ std::ostream &operator<<(std::ostream &os, GiBUUPartBlob const &part) {
      << ", ID: " << part.ID << ", Charge: " << part.Charge
      << ", PerWeight: " << part.PerWeight << ", Pos: " << part.Position
      << ", 4Mom: " << part.FourMom << ", History: " << part.History
-     << ", Prodid: " << part.Prodid << ", Enu: " << part.Enu;
+     << ", Prodid: " << part.Prodid << ", EProbe: " << part.EProbe;
   if (GiBUUToStdHepOpts::HaveProdChargeInfo) {
     os << ", ProdCharge: " << part.ProdCharge;
   }
   os << ", LineNumber: " << part.ln;
   return os << " }";
 }
+
+std::ostream &operator<<(std::ostream &os, std::vector<std::string> strs) {
+  if (!strs.size()) {
+    return os << "{ EMPTY }";
+  }
+  os << "{ " << strs.front();
+  if (strs.size() > 1) {
+    for (size_t s_it = 1; s_it < strs.size(); ++s_it) {
+      os << ", " << strs[s_it];
+    }
+  }
+  return os << " }";
 }
+}
+
+class LHVectorReader {
+  TXMLEngine xmlengine;
+
+  XMLDocPointer_t xmldoc;
+  XMLNodePointer_t evptr;
+
+  bool ReadFile;
+  size_t NEvents;
+  size_t NEventsRead;
+
+ public:
+  LHVectorReader(std::string const &FileName);
+
+ private:
+  void OpenLHDoc(std::string const &FileName);
+  void CloseDoc();
+
+  void SetFirstEventNode();
+  void NextEventNode();
+
+  bool EOV();
+
+ public:
+  size_t CountEvents();
+
+  std::vector<GiBUUPartBlob> ReadEvent();
+
+  ~LHVectorReader();
+};
 
 #endif

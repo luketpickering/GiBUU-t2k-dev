@@ -13,7 +13,7 @@ extern std::vector<std::string> InpFNames;
 /// The name of the output root file to write.
 extern std::string OutFName;
 
-/// Whether the GiBUU output contains struck nucleon information.
+/// Whether the GiBUU output contains struck nucleon information. (Ignored for Les Houches output)
 ///
 ///\note Assumed true.
 extern bool HaveStruckNucleonInfo;
@@ -25,12 +25,12 @@ extern bool IsElectronScattering;
 /// The electron beam energy used.
 extern double EScatteringInputEnergy;
 
-///\brief The neutrino species PDG.
+///\brief The probe species PDG (neutrino or electron).
 ///
 ///\note Set by
 ///  `GiBUUToStdHep.exe ... -u xx ...'
 /// Required.
-extern std::vector<int> nuTypes;
+extern std::vector<int> ProbeTypes;
 ///\brief The target nuclei nucleon number, A, for the next input file(s).
 ///
 ///\note Set by
@@ -62,7 +62,7 @@ extern std::vector<double> NFilesAddedWeights;
 extern double OverallWeight;
 
 ///\brief Whether the GiBUU output contains the neutrino-induced hadronic
-/// particles charge.
+/// particles charge. (Ignored for Les Houches output)
 ///
 ///\note Assumed true.
 extern bool HaveProdChargeInfo;

@@ -57,17 +57,17 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
     pblob.EvNum = Utils::str2i(splitLine[1]);
     pblob.ID = Utils::str2i(splitLine[2]);
     pblob.Charge = Utils::str2i(splitLine[3]);
-    pblob.PerWeight = Utils::str2f(splitLine[4]);
-    pblob.Position[GiRooTracker::kStdHepIdxPx] = Utils::str2f(splitLine[5]);
-    pblob.Position[GiRooTracker::kStdHepIdxPy] = Utils::str2f(splitLine[6]);
-    pblob.Position[GiRooTracker::kStdHepIdxPz] = Utils::str2f(splitLine[7]);
-    pblob.FourMom[GiRooTracker::kStdHepIdxE] = Utils::str2f(splitLine[8]);
-    pblob.FourMom[GiRooTracker::kStdHepIdxPx] = Utils::str2f(splitLine[9]);
-    pblob.FourMom[GiRooTracker::kStdHepIdxPy] = Utils::str2f(splitLine[10]);
-    pblob.FourMom[GiRooTracker::kStdHepIdxPz] = Utils::str2f(splitLine[11]);
+    pblob.PerWeight = Utils::str2d(splitLine[4]);
+    pblob.Position[GiRooTracker::kStdHepIdxPx] = Utils::str2d(splitLine[5]);
+    pblob.Position[GiRooTracker::kStdHepIdxPy] = Utils::str2d(splitLine[6]);
+    pblob.Position[GiRooTracker::kStdHepIdxPz] = Utils::str2d(splitLine[7]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxE] = Utils::str2d(splitLine[8]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxPx] = Utils::str2d(splitLine[9]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxPy] = Utils::str2d(splitLine[10]);
+    pblob.FourMom[GiRooTracker::kStdHepIdxPz] = Utils::str2d(splitLine[11]);
     pblob.History = Utils::str2l(splitLine[12]);
     pblob.Prodid = Utils::str2i(splitLine[13]);
-    pblob.Enu = Utils::str2f(splitLine[14]);
+    pblob.EProbe = Utils::str2d(splitLine[14]);
     if (GiBUUToStdHepOpts::HaveProdChargeInfo) {
       pblob.ProdCharge = Utils::str2i(splitLine[15]);
     }
@@ -89,7 +89,7 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
   double NRunsScaleFactor =
       GiBUUToStdHepOpts::NFilesAddedWeights[fileNumber] / double(NRunsInFile);
   bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fileNumber];
-  int FileNuType = GiBUUToStdHepOpts::nuTypes[fileNumber];
+  int FileNuType = GiBUUToStdHepOpts::ProbeTypes[fileNumber];
   int FileTargetA = GiBUUToStdHepOpts::TargetAs[fileNumber];
   int FileTargetZ = GiBUUToStdHepOpts::TargetZs[fileNumber];
   double FileExtraWeight = GiBUUToStdHepOpts::FileExtraWeights[fileNumber];
@@ -122,20 +122,20 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
     giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] =
         GiBUUToStdHepOpts::IsElectronScattering
-            ? sqrt(ev.front().Enu * ev.front().Enu -
+            ? sqrt(ev.front().EProbe * ev.front().EProbe -
                    511 * PhysConst::KeV * 511 * PhysConst::KeV)
-            : ev.front().Enu;
-    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().Enu;
+            : ev.front().EProbe;
+    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().EProbe;
 
     if (GiBUUToStdHepOpts::EScatteringInputEnergy = 0xdeadbeef) {
-      GiBUUToStdHepOpts::EScatteringInputEnergy = ev.front().Enu;
+      GiBUUToStdHepOpts::EScatteringInputEnergy = ev.front().EProbe;
     } else if (fabs(GiBUUToStdHepOpts::EScatteringInputEnergy -
-                    ev.front().Enu) > 1E-5) {
+                    ev.front().EProbe) > 1E-5) {
       UDBError("Read a differing input energy: First event: "
                << GiBUUToStdHepOpts::EScatteringInputEnergy << ", event "
                << EvNum << " in file \""
                << GiBUUToStdHepOpts::InpFNames[fileNumber] << "\" had "
-               << ev.front().Enu);
+               << ev.front().EProbe);
       throw;
     }
 
@@ -159,13 +159,13 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
                             (GiBUUToStdHepOpts::IsElectronScattering ? 1E5 : 1);
 
     if (FluxHists.count(FileNuType)) {
-      SigmaHists[FileNuType]->Fill(ev.front().Enu, giRooTracker->EvtWght);
+      SigmaHists[FileNuType]->Fill(ev.front().EProbe, giRooTracker->EvtWght);
       EvHists[FileNuType]->Fill(
-          ev.front().Enu,
+          ev.front().EProbe,
           giRooTracker->EvtWght * FluxComponentIntegrals[FileNuType]);
     }
     if (FileNuType == DomPDG) {
-      DomEvt->Fill(ev.front().Enu, giRooTracker->EvtWght * DomFCI);
+      DomEvt->Fill(ev.front().EProbe, giRooTracker->EvtWght * DomFCI);
     }
 
     giRooTracker->StdHepN = 2;
@@ -186,8 +186,9 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
         giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1;  // All other FS
       }  // should be good.
 
+      // Particles read from LH files are already in PDG format
       giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
-          GiBUUUtils::GiBUUToPDG(part.ID, part.Charge);
+          part.IDIsPDG ? part.ID : GiBUUUtils::GiBUUToPDG(part.ID, part.Charge);
 
       if (!giRooTracker->StdHepPdg[giRooTracker->StdHepN]) {
         UDBWarn("Parsed part: " << part << " from file "
@@ -268,65 +269,66 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
       }
     }
 
-    if (UDBDebugging::GetInfoLevel() > 3) {
-      UDBVerbose("[INFO]: EvNo: "
-                 << EvNum << ", contained " << giRooTracker->StdHepN << " ("
-                 << ev.size() << ") particles. "
-                                 "Event Weight: "
-                 << std::setprecision(3) << giRooTracker->GiBUUPerWeight
-                 << "\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
-                 << ", NeutConventionReactionCode: "
-                 << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
-                 << TLorentzVector(
-                        giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
-                        giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
-                        giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
-                        giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE]));
-      UDBVerbose("\t[Target] : " << giRooTracker->StdHepPdg[1]);
-      if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
-        UDBVerbose("\t[Nuc In] : "
+    if (UDBDebugging::GetInfoLevel() > 2) {
+      UDBInfo(
+          "EvNo: " << EvNum << ", contained " << giRooTracker->StdHepN << " ("
+                   << ev.size() << ") particles. "
+                                   "Event Weight: "
+                   << std::setprecision(3) << giRooTracker->GiBUUPerWeight
+                   << "\n\tGiBUUReactionCode: "
+                   << giRooTracker->GiBUUReactionCode
+                   << ", NeutConventionReactionCode: "
+                   << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
                    << TLorentzVector(
-                          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
-                          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
-                          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
-                          giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
-                   << " (" << std::setw(4) << giRooTracker->StdHepPdg[3]
-                   << ")");
+                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
+                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
+                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
+                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE])
+                   << " (" << giRooTracker->StdHepPdg[0] << ")");
+      UDBInfo("\t[Target] : " << giRooTracker->StdHepPdg[1]);
+      if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
+        UDBInfo("\t[Nuc In] : "
+                << TLorentzVector(
+                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
+                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
+                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
+                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
+                << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")");
       }
 
       // We have already printed the struck nucleon
       Int_t StartPoint = ((!GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : 4);
       for (Int_t stdHepInd = StartPoint; stdHepInd < giRooTracker->StdHepN;
            ++stdHepInd) {
-        UDBVerbose(
-            "\t[" << std::setw(2) << (stdHepInd - (StartPoint)) << "]("
-                  << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd] << ")"
-                  << TLorentzVector(
-                         giRooTracker->StdHepP4[stdHepInd]
-                                               [GiRooTracker::kStdHepIdxPx],
-                         giRooTracker->StdHepP4[stdHepInd]
-                                               [GiRooTracker::kStdHepIdxPy],
-                         giRooTracker->StdHepP4[stdHepInd]
-                                               [GiRooTracker::kStdHepIdxPz],
-                         giRooTracker->StdHepP4[stdHepInd]
-                                               [GiRooTracker::kStdHepIdxE])
+        UDBInfo("\t[" << std::setw(2) << (stdHepInd - (StartPoint)) << "]("
+                      << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd]
+                      << ")"
+                      << TLorentzVector(
+                             giRooTracker->StdHepP4[stdHepInd]
+                                                   [GiRooTracker::kStdHepIdxPx],
+                             giRooTracker->StdHepP4[stdHepInd]
+                                                   [GiRooTracker::kStdHepIdxPy],
+                             giRooTracker->StdHepP4[stdHepInd]
+                                                   [GiRooTracker::kStdHepIdxPz],
+                             giRooTracker->StdHepP4[stdHepInd]
+                                                   [GiRooTracker::kStdHepIdxE])
 #ifndef CPP03COMPAT
-                  << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")"
+                      << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")"
 #endif
 
-            );
+                );
 #ifndef CPP03COMPAT
-        UDBVerbose("\t\t" << GiBUUUtils::WriteGiBUUHistory(
-                       giRooTracker->GiBHepHistory[stdHepInd]));
+        UDBInfo("\t\t" << GiBUUUtils::WriteGiBUUHistory(
+                    giRooTracker->GiBHepHistory[stdHepInd]));
 #endif
       }
-      UDBVerbose("\t[Lep Out]: "
-                 << TLorentzVector(
-                        giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
-                        giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
-                        giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
-                        giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
-                 << std::endl);
+      UDBInfo("\t[Lep Out]: "
+              << TLorentzVector(
+                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
+                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
+                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
+                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
+              << " (" << giRooTracker->StdHepPdg[2] << ")" << std::endl);
     }
     OutputTree->Fill();
     NumEvs++;
@@ -357,7 +359,7 @@ std::string GetLastLine(std::ifstream &in) {
   return line;
 }
 
-int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
+int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
   std::vector<std::vector<GiBUUPartBlob> > FileEvents;
   // http://www2.research.att.com/~bs/bs_faq2.html
   // People sometimes worry about the cost of std::vector growing incrementally.
@@ -374,76 +376,127 @@ int ParseFinalEventsFile(TTree *OutputTree, GiRooTracker *giRooTracker) {
   for (size_t fname_it = 0; fname_it < GiBUUToStdHepOpts::InpFNames.size();
        ++fname_it) {
     std::string const &fname = GiBUUToStdHepOpts::InpFNames[fname_it];
-    std::ifstream ifs(fname.c_str());
 
-    if (!ifs.good()) {
-      UDBError("Failed to open " << fname << " for reading.");
-      return 1;
-    }
-
-    /// Get NRuns
-    size_t NRunsInFile = 0;
     size_t NEvsInFile = 0;
-    std::string line = GetLastLine(ifs);
-    std::vector<std::string> splitLine = Utils::SplitStringByDelim(line, " ");
-    NRunsInFile = Utils::str2i(splitLine[0]);
-    UDBLog("Found " << NRunsInFile << " runs in " << fname << ".");
 
-    /// Rewind
-    ifs.clear();
-    ifs.seekg(0);
+    std::string format = Utils::SplitStringByDelim(fname, ".").back();
+    if (format == "lhe") {
+      bool holder_SNI = GiBUUToStdHepOpts::HaveStruckNucleonInfo;
+      bool holder_PCI = GiBUUToStdHepOpts::HaveProdChargeInfo;
+      GiBUUToStdHepOpts::HaveStruckNucleonInfo = false;
+      GiBUUToStdHepOpts::HaveProdChargeInfo = false;
 
-    std::vector<GiBUUPartBlob> CurrEv;
-    size_t LastEvNum = 0;
-    size_t LineNum = 0;
-    while (std::getline(ifs, line)) {
-      UDBVerbose("[LINE:" << LineNum << "]: " << line);
+      LHVectorReader lhevr(fname);
 
-      if (line[0] == '#') {  // Skip comments
-        continue;
+      UDBVerbose("Les Houches File with " << lhevr.CountEvents()
+                                          << " events found. ");
+
+      size_t NParts = 0;
+      do {
+        std::vector<GiBUUPartBlob> ev = lhevr.ReadEvent();
+        if ((NParts = ev.size())) {
+          // Have to force known FSLepton information
+          int FSLeptonPDG = 0;
+          if (GiBUUToStdHepOpts::IsElectronScattering) {
+            FSLeptonPDG = 11;
+          } else {
+            bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fileNumber];
+            int FileNuType = GiBUUToStdHepOpts::ProbeTypes[fileNumber];
+            if (FileIsCC) {
+              FSLeptonPDG = FileNuType + ((FileNuType < 0) ? +1 : -1);
+            } else {  // NC event
+              FSLeptonPDG = FileNuType;
+            }
+          }
+          ev.front().ID = FSLeptonPDG;
+          FileEvents.push_back(ev);
+        }
+
+        if (FileEvents.size() == 5E4) {
+          NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber,
+                                          1, FileEvents);
+        }
+
+      } while (NParts);
+
+      if (FileEvents.size()) {
+        NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber, 1,
+                                        FileEvents);
+      }
+
+      GiBUUToStdHepOpts::HaveStruckNucleonInfo = holder_SNI;
+      GiBUUToStdHepOpts::HaveProdChargeInfo = holder_PCI;
+
+    } else {
+      std::ifstream ifs(fname.c_str());
+
+      if (!ifs.good()) {
+        UDBError("Failed to open " << fname << " for reading.");
+        return 1;
+      }
+
+      /// Get NRuns
+      size_t NRunsInFile = 0;
+      std::string line = GetLastLine(ifs);
+      std::vector<std::string> splitLine = Utils::SplitStringByDelim(line, " ");
+      NRunsInFile = Utils::str2i(splitLine[0]);
+      UDBLog("Found " << NRunsInFile << " runs in " << fname << ".");
+
+      /// Rewind
+      ifs.clear();
+      ifs.seekg(0);
+
+      std::vector<GiBUUPartBlob> CurrEv;
+      size_t LastEvNum = 0;
+      size_t LineNum = 0;
+      while (std::getline(ifs, line)) {
+        UDBVerbose("[LINE:" << LineNum << "]: " << line);
+
+        if (line[0] == '#') {  // Skip comments
+          continue;
+          LineNum++;
+        }
+        GiBUUPartBlob const &part = GetParticleLine(line);
+
+        if ((part.PerWeight == 0) &&
+            (!GiBUUToStdHepOpts::HaveStruckNucleonInfo)) {
+          UDBWarn(
+              "Found particle with 0 weight, but do not have "
+              "initial state information enabled (-v -1 to silence this "
+              "message).");
+        }
+
+        if ((part.EvNum != int(LastEvNum)) && LastEvNum) {
+          FileEvents.push_back(CurrEv);
+          ParsedEvs++;
+          CurrEv.clear();
+
+          // Flush events every 50k events
+          if (FileEvents.size() == 5E4) {
+            NEvsInFile += FlushEventsToDisk(
+                OutputTree, giRooTracker, fileNumber, NRunsInFile, FileEvents);
+          }
+        }
+        CurrEv.push_back(part);
+        CurrEv.back().ln = LineNum;
+        LastEvNum = part.EvNum;
         LineNum++;
       }
-      GiBUUPartBlob const &part = GetParticleLine(line);
 
-      if ((part.PerWeight == 0) &&
-          (!GiBUUToStdHepOpts::HaveStruckNucleonInfo)) {
-        UDBWarn(
-            "Found particle with 0 weight, but do not have "
-            "initial state information enabled (-v -1 to silence this "
-            "message).");
-      }
-
-      if ((part.EvNum != int(LastEvNum)) && LastEvNum) {
+      if (CurrEv.size()) {
         FileEvents.push_back(CurrEv);
         ParsedEvs++;
         CurrEv.clear();
-
-        // Flush events every 50k events
-        if (FileEvents.size() == 5E4) {
-          NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber,
-                                          NRunsInFile, FileEvents);
-        }
       }
-      CurrEv.push_back(part);
-      CurrEv.back().ln = LineNum;
-      LastEvNum = part.EvNum;
-      LineNum++;
+
+      // Flush any remaining events
+      if (FileEvents.size()) {
+        NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber,
+                                        NRunsInFile, FileEvents);
+      }
+
+      ifs.close();  // Read all the lines.
     }
-
-    if (CurrEv.size()) {
-      FileEvents.push_back(CurrEv);
-      ParsedEvs++;
-      CurrEv.clear();
-    }
-
-    // Flush events every 10k events
-    if (FileEvents.size()) {
-      NEvsInFile += FlushEventsToDisk(OutputTree, giRooTracker, fileNumber,
-                                      NRunsInFile, FileEvents);
-    }
-
-    ifs.close();  // Read all the lines.
-
     UDBLog("Found " << NEvsInFile << " events in " << fname << ".");
 
     if (!NEvsInFile) {
@@ -714,7 +767,7 @@ int GiBUUToStdHep() {
   }
 
   int ParserRtnCode = 0;
-  ParserRtnCode = ParseFinalEventsFile(rooTrackerTree, giRooTracker);
+  ParserRtnCode = ParseACSIIEventVectors(rooTrackerTree, giRooTracker);
 
   rooTrackerTree->Write();
 
