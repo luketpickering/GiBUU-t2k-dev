@@ -16,7 +16,7 @@
   - Make a build directory: `mkdir build`
   - Configure the build: `cd build && cmake ../`
   - Optional -- If you want to download, patch, and build a local version of
-  GiBUU2016 use `cmake /path/to/source -DUSE_GIBUU=1` instead.
+  GiBUU2017 use `cmake /path/to/source -DUSE_GIBUU=1` instead.
   - Build! `make`.
   - Optional: Build the documentation -- `make docs`.
     - This release should come with pre-compiled documentation at
