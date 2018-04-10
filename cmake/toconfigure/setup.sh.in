@@ -1,5 +1,13 @@
 #!/bin/sh
 
+EXTRA_SETUP_SCRIPT="@EXTRA_SETUP_SCRIPT@"
+if [ "${EXTRA_SETUP_SCRIPT}" ]; then
+  echo "[INFO]: Sourcing extra environment set up: ${EXTRA_SETUP_SCRIPT}"
+  set -x
+  source ${EXTRA_SETUP_SCRIPT}
+  set +x
+fi
+
 if ! [[ ":$PATH:" == *":@CMAKE_INSTALL_PREFIX@/bin:"* ]]; then
   export PATH=@CMAKE_INSTALL_PREFIX@/bin:$PATH
 fi
@@ -12,7 +20,7 @@ fi
 export GIBUUTOOLSROOT=@CMAKE_INSTALL_PREFIX@
 
 if [[ "@USE_GiBUU@" != "0" ]]; then
-  echo "Using GiBUU installed at @CMAKE_INSTALL_PREFIX@/GiBUUInstall/GiBUU2016"\
+  echo "Using GiBUU installed at @CMAKE_INSTALL_PREFIX@/GiBUUInstall/@GIBUUVERNAME@"\
 ", with inputs at @CMAKE_INSTALL_PREFIX@/GiBUUInstall/BUUInput/src/BUUInput"
   export PATH=@CMAKE_INSTALL_PREFIX@/bin/gibuu:$PATH
 fi

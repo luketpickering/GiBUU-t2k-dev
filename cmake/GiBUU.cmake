@@ -11,25 +11,38 @@ if (DEFINED USE_GiBUU AND USE_GiBUU)
       set(NO_EXTERNAL_UPDATE 0)
   endif()
 
-  SET(GIBUUVER 6910)
+  # SET(GIBUUVER 6910)
+  SET(GIBUUVER 7339)
+  SET(GIBUUVERNAME "GiBUU2016")
+  SET(GIBUUINPREPO "http://gibuu.hepforge.org/svn/releases/release2016")
+  SET(BUUINPREPO "http://gibuu.hepforge.org/svn/releases/buuinput2016")
 
   if(${GIBUUVER} EQUAL 6910)
-    SET(PATCHNAME GiBUU2016_ArbFlux_ProdCharg.patch)
+    SET(PATCHNAME GiBUU2016_ArbFlux_ProdCharge.patch)
   endif()
 
+  if(${GIBUUVER} EQUAL 7339)
+    SET(PATCHNAME GiBUU2017_ArbFlux_ProdCharge.patch)
+    SET(GIBUUVERNAME "GiBUU2017")
+    SET(GIBUUINPREPO "http://gibuu.hepforge.org/svn/releases/release2017")
+    SET(BUUINPREPO "http://gibuu.hepforge.org/svn/releases/buuinput2017")
+  endif()
+
+  message(STATUS "Using GiBUU version ${GIBUUVERNAME} from repo ${GIBUUINPREPO}")
+
   ExternalProject_Add(GiBUU
-    PREFIX "${CMAKE_INSTALL_PREFIX}/GiBUUInstall/GiBUU2016"
-    SVN_REPOSITORY http://gibuu.hepforge.org/svn/releases/release2016
+    PREFIX "${CMAKE_INSTALL_PREFIX}/GiBUUInstall/${GIBUUVERNAME}"
+    SVN_REPOSITORY ${GIBUUINPREPO}
     SVN_REVISION -r ${GIBUUVER}
     UPDATE_COMMAND ""
-    PATCH_COMMAND cd ${CMAKE_INSTALL_PREFIX}/GiBUUInstall/GiBUU2016/src/GiBUU && patch -p1 --ignore-whitespace < ${PROJECT_SOURCE_DIR}/patches/${PATCHNAME}
+    PATCH_COMMAND cd ${CMAKE_INSTALL_PREFIX}/GiBUUInstall/${GIBUUVERNAME}/src/GiBUU && patch -p1 --ignore-whitespace < ${PROJECT_SOURCE_DIR}/patches/${PATCHNAME}
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND cd ${CMAKE_INSTALL_PREFIX}/GiBUUInstall/GiBUU2016/src/GiBUU && make
-    INSTALL_COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/bin/gibuu && cp ${CMAKE_INSTALL_PREFIX}/GiBUUInstall/GiBUU2016/src/GiBUU/objects/GiBUU.x ${CMAKE_INSTALL_PREFIX}/bin/gibuu)
+    BUILD_COMMAND cd ${CMAKE_INSTALL_PREFIX}/GiBUUInstall/${GIBUUVERNAME}/src/GiBUU && make
+    INSTALL_COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/bin/gibuu && cp ${CMAKE_INSTALL_PREFIX}/GiBUUInstall/${GIBUUVERNAME}/src/GiBUU/objects/GiBUU.x ${CMAKE_INSTALL_PREFIX}/bin/gibuu)
 
   ExternalProject_Add(BUUInput
     PREFIX "${CMAKE_INSTALL_PREFIX}/GiBUUInstall/BUUInput"
-    SVN_REPOSITORY http://gibuu.hepforge.org/svn/releases/buuinput2016
+    SVN_REPOSITORY ${BUUINPREPO}
     UPDATE_COMMAND ""
     PATCH_COMMAND ""
     CONFIGURE_COMMAND ""

@@ -1354,9 +1354,9 @@ fi # end N_CC_JOBS_NUE
 
 mkdir stdhep; cd stdhep
 
-HOLD_JID=$(echo ${HOLD_JID} | tr " " ",")
+# HOLD_JID=$(echo ${HOLD_JID} | tr " " ",")
 
-echo "[INFO]: Holding on ${HOLD_JID}"
+# echo "[INFO]: Holding on ${HOLD_JID}"
 
 TOTAL_RESCALE=$(python -c "print (${TARGET_A} + ${N_H_IN_COMPOSITE});")
 
@@ -1421,9 +1421,11 @@ fi
 echo "-R i${TOTAL_RESCALE}" >> stdhep.conv.opts
 echo "-o ${JOB_NAME}_GiBUU.stdhep.root" >> stdhep.conv.opts
 
-STDHEPPROC_JID_MSG=$(qsub -hold_jid ${HOLD_JID} -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh)
-STDHEPPROC_JID=$(echo "${STDHEPPROC_JID_MSG}" | sed "s|^Your job \([0-9]\+\) .*|\1|g")
+# echo "qsub -hold_jid \"${HOLD_JID}\" -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh"
+# STDHEPPROC_JID_MSG=$(qsub -hold_jid "${HOLD_JID}" -v GIBUUTOOLSROOT=${GIBUUTOOLSROOT} ${GIBUUTOOLSROOT}/batchjobs/ProcessToStdHep.sh)
+# STDHEPPROC_JID=$(echo "${STDHEPPROC_JID_MSG}" | sed "s|^Your job \([0-9]\+\) .*|\1|g")
 cd ../
 
-echo -e "#!/bin/sh\necho \"Killing jobs: ${HOLD_JID}\";qdel ${HOLD_JID},${STDHEPPROC_JID}" > killjobs.sh
+# echo -e "#!/bin/sh\necho \"Killing jobs: ${HOLD_JID}\";qdel ${HOLD_JID},${STDHEPPROC_JID}" > killjobs.sh
+echo -e "#!/bin/sh\necho \"Killing jobs: ${HOLD_JID}\";qdel ${HOLD_JID}" > killjobs.sh
 chmod +x killjobs.sh
