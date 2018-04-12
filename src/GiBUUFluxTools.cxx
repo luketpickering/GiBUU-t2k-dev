@@ -23,7 +23,7 @@ std::string InputTHName = "";
 bool doRebin = false;
 size_t NBins;
 double BinL, BinH;
-}
+} // namespace Opts
 
 int WriteFile(float *BinCenters, float *BinWidths, float *BinValues,
               size_t NBins) {
@@ -135,7 +135,7 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
   size_t ln = 0;
   std::vector<tfl> BinEdgeVals;
   while (std::getline(ifs, line)) {
-    if (line[0] == '#') {  // ignore comments
+    if (line[0] == '#') { // ignore comments
       ln++;
       continue;
     }
@@ -154,11 +154,11 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
       return 2;
     }
     tfl t;
-    if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
+    if (Opts::UpBinEdgeColumn != -1) { // If we have both Bin Edge columns
       t.lowbinedge = splitLine[Opts::LowBinEdgeColumn];
       t.upbinedge = splitLine[Opts::UpBinEdgeColumn];
       t.value = splitLine[Opts::ValueColumn];
-    } else {  // Only have low bin edges
+    } else { // Only have low bin edges
       t.lowbinedge = splitLine[Opts::LowBinEdgeColumn];
       t.upbinedge = 0xdead;
       t.value = splitLine[Opts::ValueColumn];
@@ -178,16 +178,16 @@ int Text_BinEdgeToBinCenterPDFFlux_Text() {
   float *BinWidths = new float[BinEdgeVals.size()];
   float *BinValues = new float[BinEdgeVals.size()];
   for (size_t i = 0; i < BinEdgeVals.size(); ++i) {
-    if (Opts::UpBinEdgeColumn != -1) {  // If we have both Bin Edge columns
+    if (Opts::UpBinEdgeColumn != -1) { // If we have both Bin Edge columns
       BinWidths[i] = BinEdgeVals[i].upbinedge - BinEdgeVals[i].lowbinedge;
-    } else {  // Only have low bin edges
+    } else { // Only have low bin edges
       BinWidths[i] =
           ((i + 1) != BinEdgeVals.size())
               ? (BinEdgeVals[i + 1].lowbinedge - BinEdgeVals[i].lowbinedge)
               : (BinEdgeVals[i].lowbinedge -
-                 BinEdgeVals[i - 1].lowbinedge);  // Assume the last bin is
-                                                  // the same width as the
-                                                  // previous bin
+                 BinEdgeVals[i - 1].lowbinedge); // Assume the last bin is
+                                                 // the same width as the
+                                                 // previous bin
     }
     BinCenters[i] = BinEdgeVals[i].lowbinedge + BinWidths[i] / 2.0;
     BinValues[i] = BinEdgeVals[i].value;
@@ -238,6 +238,7 @@ bool Handle_Rebin(std::string const &opt) {
   std::vector<std::string> args = Utils::SplitStringByDelim(opt, ",");
   if (args.size() != 3) {
     std::cout << "--Expected -U argument in the form <NBins>,<BinLow>,<BinHigh>"
+              << ", but got " << opt << " (" << args.size() << ")."
               << std::endl;
     return false;
   }
@@ -292,13 +293,7 @@ bool Handle_UnitNorm(std::string const &opt) {
 
 void SayRunLike(char const *argv[]) {
   std::cout
-      << "[RUNLIKE]: " << argv[0]
-      << " -o <Output file name> [-h] [-l "
-         "<Low bin edge column number>] [-u <Upper bin edge column number>] "
-         "[-v Value column number>] [-t <Input text file name>] [-r <Input "
-         "ROOT file name>] [-H <Input ROOT histogram name>] [-k]"
-
-      << "\n-----------------------------------\n"
+      << "[USAGE]: " << argv[0] << "\n-----------------------------------\n"
 
       << "\n\t[Arg]: (-h|--help)"
       << "\n\t[Arg]: (-l|--low-bin-edge) <Low bin edge column number>"
@@ -309,6 +304,7 @@ void SayRunLike(char const *argv[]) {
       << "\n\t[Arg]: (-H|--input-ROOT-histogram) <Input ROOT histogram name>"
       << "\n\t[Arg]: (-o|--output-file) <Output file name> [Required]"
       << "\n\t[Arg]: (-w|--width-unit-normalise)"
+      << "\n\t[Arg]: (-U|--rebin-uniform) <NBins,BinLow,BinHigh>"
       << "\n\t[Arg]: (-n|--unit-normalise)" << std::endl;
 }
 
@@ -324,9 +320,10 @@ bool HandleArgs(int argc, char const *argv[]) {
   std::string arg, opt;
   for (size_t opt_it = 0; opt_it < ArgArray.size();) {
     if (!LastArgOkay) {
-      UDBError("Argument: \"" << arg << (arg.length() ? std::string(" ") + arg
-                                                      : std::string(""))
-                              << "\" was not correctly understood.");
+      UDBError("Argument: \""
+               << arg
+               << (arg.length() ? std::string(" ") + arg : std::string(""))
+               << "\" was not correctly understood.");
       return false;
     }
     arg = ArgArray[opt_it++];
@@ -413,6 +410,7 @@ bool HandleArgs(int argc, char const *argv[]) {
     }
 
     if (("-U" == arg) || ("--rebin-uniform" == arg)) {
+      opt = ArgArray[opt_it++];
       LastArgOkay = Handle_Rebin(opt);
       continue;
     }
