@@ -1,0 +1,527 @@
+diff --git a/Makefile.objects b/Makefile.objects
+index 5479722..bd2d9e8 100644
+--- a/Makefile.objects
++++ b/Makefile.objects
+@@ -244,12 +244,14 @@ ifeq ($(PDF),LHAPDF)
+ endif
+        @if [ ! -f $(LIBDIR)/libPDF.a ]; then \
+        echo "Using PDFstub..."; \
++	mkdir -p $(LIBDIR); \
+        ln -s $(LIBDIR)/libPDFstub.orig.6225.a $(LIBDIR)/libPDF.a; \
+        fi
+ 
+ buildLIBpdfstub: libPDFstub.orig.6225.a
+        @-rm -f $(LIBDIR)/$<
+-	@ln -s $(CURDIR)/$< $(LIBDIR)
++	mkdir -p $(LIBDIR)
++	@-ln -s $(CURDIR)/$< $(LIBDIR)
+ 
+ lib%.a: %.o
+        -rm $@
+diff --git a/code/GiBUU.f90 b/code/GiBUU.f90
+index 7e4efbc..2f4e702 100644
+--- a/code/GiBUU.f90
++++ b/code/GiBUU.f90
+@@ -237,6 +237,7 @@ contains
+     use initHadron, only: initHadronInduced
+     use initNeutrino, only: init_Neutrino, neutrinoInit_getRealRun
+     use initTransportGivenParticle, only: init_transportGivenParticle
++    use InitNDK, only: InitNDKEvents
+     use initExternal, only: initializeExternal, ExternalIsPerturbative
+ 
+     use nucleus, only: getTarget, getProjectile
+@@ -330,6 +331,8 @@ contains
+       case (hadron)
+          lengthPert =  1
+          lengthReal = targetNuc%mass + 100
++      case(NDK)
++         lengthPert =  max(100,10*targetNuc%mass)
+       end select
+ 
+       !...Defining maximal lenghts of particle vectors: (From Input)
+@@ -539,6 +542,10 @@ contains
+ 
+        call init_transportGivenParticle(realParticles,pertParticles)
+ 
++    case (NDK)
++      call setUpTarget(.false.)
++
++      call InitNDKEvents(realParticles,pertParticles)
+     case default
+        write(*,*) 'No valid eventtype:',eventtype,'STOP'
+        call traceback()
+@@ -686,7 +693,7 @@ contains
+           call Dilep_Decays(0.,realParticles,1)
+        end select
+ 
+-       if (eventtype==neutrino.or.eventtype==transportGivenParticle) &
++       if (eventtype==neutrino.or.eventtype==transportGivenParticle.or.eventtype==NDK) &
+             call doRadiativeDeltaDecay(0,pertParticles)
+ 
+        call deuteriumPL_assign(realParticles)
+@@ -799,6 +806,9 @@ contains
+           call transportGivenParticle_analyze(pertParticles,timestep)
+           call doRadiativeDeltaDecay(TimeStep,pertParticles)
+ 
++       case (NDK)
++          call doRadiativeDeltaDecay(TimeStep,pertParticles)
++
+        case (InABox)
+           call doInABoxAnalysisTime(realParticles, timestep)
+ 
+@@ -954,7 +964,7 @@ contains
+           call resetSMMvalues
+        end if
+ 
+-    case (neutrino,transportGivenParticle)
++    case (neutrino,transportGivenParticle,NDK)
+        call doRadiativeDeltaDecay(numTimeSteps+1,pertParticles)
+ 
+     case (HiLepton)
+@@ -1012,6 +1022,7 @@ contains
+     use radiativeDeltaDecay, only: radiativeDeltaDecay_write_CS
+     use EventOutputAnalysis, only: doEventOutput
+     use analyzeSpectra, only: doAnalyzeSpectra
++    use NDKProdInfo, only: NDKProdInfo_Clear
+ 
+     logical, intent(in) :: finalizeFlag, beforeRUN
+     integer :: i,j
+@@ -1138,6 +1149,10 @@ contains
+     call doAnalyzeSpectra(realparticles, pertParticles, numTimeSteps+1,&
+          0.0, finalizeFlag)
+ 
++    if (eventtype.eq.NDK) then
++      call NDKProdInfo_Clear()
++    end if
++
+   end subroutine analysis
+ 
+ 
+diff --git a/code/database/EventTypes.f90 b/code/database/EventTypes.f90
+index 4f705ed..7050ca0 100644
+--- a/code/database/EventTypes.f90
++++ b/code/database/EventTypes.f90
+@@ -48,5 +48,6 @@ module eventtypes
+   integer, parameter :: groundState            = 100
+   integer, parameter :: transportGivenParticle = 200
+   integer, parameter :: hadron                 = 300
++  integer, parameter :: NDK                 = 400
+ 
+ end module eventtypes
+diff --git a/code/init/NDKProdInfo.f90 b/code/init/NDKProdInfo.f90
+new file mode 100644
+index 0000000..3e166df
+--- /dev/null
++++ b/code/init/NDKProdInfo.f90
+@@ -0,0 +1,144 @@
++!******************************************************************************
++!****m* /NDKProdInfo
++! NAME
++! module NDKProdInfo
++!
++! PURPOSE
++! This module stores information about the initial nucleon decay.
++!
++!******************************************************************************
++module NDKProdInfo
++  implicit none
++  private
++
++  !****************************************************************************
++  !****t* NDKProdInfo/tNDKProdInfo
++  ! SOURCE
++  !
++  type tNDKProdInfo
++     real,dimension(0:3)    :: mom_kp_init=0.
++  end type tNDKProdInfo
++  !
++  ! PURPOSE
++  ! This holds all information we want to store connected to
++  ! NDK interactions.
++  !****************************************************************************
++
++  type(tNDKProdInfo),save,dimension(:),allocatable :: KPProdInfo
++
++  public :: NDKProdInfo_Init
++  public :: NDKProdInfo_Store
++  public :: NDKProdInfo_Get
++  public :: NDKProdInfo_Clear
++
++contains
++
++  !****************************************************************************
++  !****s* NDKProdInfo/NDKProdInfo_Init
++  ! NAME
++  ! subroutine NDKProdInfo_Init(NumInitialEvents)
++  !
++  ! PURPOSE
++  ! allocate memory and reset the corresponding arrays.
++  !
++  ! INPUTS
++  ! * integer :: NumInitialEvents -- number of possible initial events
++  !
++  ! OUTPUT
++  ! ---
++  !
++  ! NOTES
++  ! The current implementation is very 'expensive'
++  !****************************************************************************
++  subroutine NDKProdInfo_Init(NumInitialEvents)
++
++    integer,intent(in) :: NumInitialEvents
++
++
++    if (allocated(KPProdInfo)) then
++       deallocate(KPProdInfo)
++    end if
++    allocate(KPProdInfo(1:NumInitialEvents))
++
++    KPProdInfo%mom_kp_init(0) = 0.
++    KPProdInfo%mom_kp_init(1) = 0.
++    KPProdInfo%mom_kp_init(2) = 0.
++    KPProdInfo%mom_kp_init(3) = 0.
++
++  end subroutine NDKProdInfo_Init
++
++  !****************************************************************************
++  !****s* NDKProdInfo/NDKProdInfo_Clear
++  ! NAME
++  ! subroutine NDKProdInfo_Clear()
++  !
++  ! PURPOSE
++  ! deallocate memory.
++  !
++  ! INPUTS
++  ! ---
++  !
++  ! OUTPUT
++  ! ---
++  !
++  ! NOTES
++  ! ---
++  !****************************************************************************
++  subroutine NDKProdInfo_Clear()
++
++    if (allocated(KPProdInfo)) then
++       deallocate(KPProdInfo)
++    end if
++
++  end subroutine NDKProdInfo_Clear
++
++
++  !****************************************************************************
++  !****s* NDKProdInfo/NDKProdInfo_Store
++  ! NAME
++  ! subroutine NDKProdInfo_Store(i,prod_id,perweight,Mom_LepIn,Mom_LepOut,Mom_Bos)
++  !
++  ! PURPOSE
++  ! Store the event info connected with number "i":
++  !
++  !
++  ! INPUTS
++  ! * real,dimension(0:3)    :: mom -- The intial K+ four momentum
++  ! OUTPUT
++  ! ---
++  !****************************************************************************
++  subroutine NDKProdInfo_Store(i,mom)
++
++    integer,intent(in)             :: i
++    real,dimension(0:3),intent(in) :: Mom
++
++    KPProdInfo(i)%mom_kp_init=mom
++
++  end subroutine NDKProdInfo_Store
++
++  !****************************************************************************
++  !****f* NDKProdInfo/NDKProdInfo_Get
++  ! NAME
++  ! logical function NDKProdInfo_Get(i,mom)
++  !
++  ! PURPOSE
++  ! Get the event info stored connected with number "i".
++  !
++  ! INPUTS
++  ! * integer :: i -- actual number of event
++  !
++  ! OUTPUT
++  ! * real,dimension(0:3)    :: Mom
++  !****************************************************************************
++  subroutine NDKProdInfo_Get(i,mom)
++
++    integer,intent(in)              :: i
++    real,dimension(0:3),intent(out) :: Mom
++
++    if (.not.allocated(KPProdInfo)) return
++
++    mom=KPProdInfo(i)%mom_kp_init
++
++  end subroutine NDKProdInfo_Get
++
++end module NDKProdInfo
+diff --git a/code/init/initNDK.f90 b/code/init/initNDK.f90
+new file mode 100644
+index 0000000..ad3b0df
+--- /dev/null
++++ b/code/init/initNDK.f90
+@@ -0,0 +1,231 @@
++!******************************************************************************
++!****m* /InitNDK
++! NAME
++! module InitNDK
++!
++! PURPOSE
++! Initialisation of the particle vector for eventtype "TransportGivenParticle".
++!******************************************************************************
++module InitNDK
++  implicit none
++  private
++
++  !****************************************************************************
++  !****g* InitNDK/UseEffectiveMass
++  ! SOURCE
++  logical, save :: UseEffectiveMass = .false.
++  ! PURPOSE
++  ! Whether to use the local or effective proton mass to calculate decay kinematics
++  !****************************************************************************
++
++  !****************************************************************************
++  !****g* InitNDK/DecayToID
++  ! SOURCE
++  integer, save :: DecayToID = 110
++  ! PURPOSE
++  ! The particle to decay to, Defaults to K+: 110
++  !****************************************************************************
++
++
++  public :: InitNDKEvents
++  logical, save :: InitFlag=.true.
++  integer, save :: NEv=0
++
++contains
++
++  !****************************************************************************
++  !****s* InitNDK/ReadNDKInput
++  ! NAME
++  ! subroutine ReadNDKInput
++  ! PURPOSE
++  ! This subroutine reads input out of jobcard
++  ! from namelist 'NDK'.
++  !****************************************************************************
++  subroutine ReadNDKInput
++    use output, only: Write_ReadingInput
++
++    integer :: ios
++
++    !**************************************************************************
++    !****n* InitNDK/NDK
++    ! NAME
++    ! NAMELIST /NDK/
++    ! PURPOSE
++    ! This Namelist includes:
++    ! * UseEffectiveMass
++    !**************************************************************************
++    NAMELIST /NDK/ UseEffectiveMass, DecayToID
++
++    call Write_ReadingInput('NDK',0)
++    rewind(5)
++    read(5,nml=NDK,IOSTAT=ios)
++    call Write_ReadingInput("NDK",0,ios)
++    call Write_ReadingInput('NDK',1)
++
++    if (UseEffectiveMass) then
++       write(*,*) 'Using chosen proton effective mass to calculate decay kinematics'
++    else
++       write(*,*) 'Decay kinematics assumes proton bare mass'
++    end if
++
++    write(*,*) 'Decaying proton to neutrino + ID:', DecayToID
++
++  end subroutine ReadNDKInput
++
++
++  !****************************************************************************
++  !****s* initTransportGivenParticle/InitNDKEvents
++  ! NAME
++  ! subroutine InitNDKEvents(realParticles,pertParticles)
++  !
++  ! PURPOSE
++  ! This subroutine initializes a proton decay event.
++  !
++  ! INPUTS
++  ! * type(particle), dimension(:,:) :: realParticles
++  !
++  ! OUTPUT
++  ! * type(particle), dimension(:,:) :: pertParticles
++  !****************************************************************************
++  subroutine InitNDKEvents(realParticles,pertParticles)
++    use particleDefinition
++    use nucleusDefinition
++    use NuclearPDF, only: SetNuclearPDFA
++    use random, only: rn
++    use constants, only: pi
++    use idtable, only: nucleon
++    use ParticleProperties, only: hadron
++    use collisionNumbering, only:pert_numbering
++    use insertion, only: setIntoVector
++    use nucleus, only:getTarget
++    use lorentzTrafo, only:lorentzCalcBeta, lorentz
++    use vector, only:absVec
++    use NDKProdInfo
++
++    use energyCalc, only: energyDetermination
++    use propagation, only: updateVelocity
++    ! use inputGeneral, only:fullEnsemble
++    use offShellPotential, only:getOffShellParameter
++
++    integer :: i,j
++    logical :: setflag
++
++    type(particle), dimension(:,:),intent(inOut) :: realParticles
++    type(particle), dimension(:,:),intent(inOut) :: pertParticles
++
++    type(tnucleus), pointer :: targetNuc
++
++    type(particle), dimension(1:1) :: finalstate
++
++    real :: DecayFrameMomentum, DecayFrameKPEnergy
++    real :: FSPartMass, ParentMass
++    real :: rnCosTh, rnPhi, sinTh
++    real, dimension (1:3) :: BoostMomentum, BoostVelocity, DecayFrameDirection
++    real, dimension (0:3) :: DecayFrameKP4Momentum, NucleonFrameKP4Momentum
++
++    integer :: NumEvs
++
++    if (InitFlag) then
++       call ReadNDKInput
++       InitFlag=.false.
++    end if
++
++    targetNuc => getTarget()
++    call SetNuclearPDFA(targetNuc%mass)
++
++    NumEvs=0
++      do i = lbound(realParticles,dim=1),ubound(realParticles,dim=1)
++         do j = lbound(realParticles,dim=2),ubound(realParticles,dim=2)
++            if ((realParticles(i,j)%ID.ne.nucleon).or.(realParticles(i,j)%charge.ne.1)) cycle
++            NumEvs=NumEvs+1
++         end do
++      end do
++
++    NEv = 0
++    call NDKProdInfo_Init(NumEvs)
++
++    loopOverEnsemble: do i = lbound(realParticles,dim=1),ubound(realParticles,dim=1)
++       if (mod(i,50)==0) write(*,*) 'Now starting ensemble ',i
++
++       loopVector: do j = lbound(realParticles,dim=2),ubound(realParticles,dim=2)
++
++       !Only in the business of decaying protons
++          if ((realParticles(i,j)%ID.ne.nucleon).or.(realParticles(i,j)%charge.ne.1)) cycle
++
++          ParentMass = hadron(realParticles(i,j)%ID)%mass
++          FSPartMass = hadron(DecayToID)%mass
++
++          call setToDefault(finalState)
++
++          finalState(1)%antiparticle = .false.
++          finalState(1)%perturbative = .true.
++          finalState(1)%productionTime = 0.
++          finalState(1)%lastCollisionTime = 0.
++          finalState(1)%formationTime = 0.
++          finalState(1)%scaleCS = 1.
++          finalState(1)%in_Formation = .false.
++          finalState(1)%event(1) = pert_numbering(realParticles(i,j))
++          finalState(1)%firstEvent = GetNEv()
++          finalstate(1)%history = 0
++          finalstate(1)%charge = 1
++          finalstate(1)%mass = FSPartMass
++          finalstate(1)%ID = DecayToID
++
++          !Two body decay
++          DecayFrameMomentum = sqrt( (ParentMass**2 + FSPartMass**2)**2 - 4*(ParentMass**2)*FSPartMass**2 ) / (2*ParentMass)
++          DecayFrameKPEnergy = sqrt(DecayFrameMomentum**2 + FSPartMass**2)
++
++          !Throw a random direction in the proton rest frame
++          rnPhi = 2*pi*rn()
++          rnCosTh = -1 + 2*rn()
++          rnCosTh = max(-1.0, min(1.0, rnCosTh))
++          sinTh = sqrt(1 - rnCosTh**2)
++
++          DecayFrameDirection(1) = sinTh * cos(rnPhi)
++          DecayFrameDirection(2) = sinTh * sin(rnPhi)
++          DecayFrameDirection(3) = rnCosTh
++
++          !Calculate K+ initial four momentum
++          DecayFrameKP4Momentum(0) = DecayFrameKPEnergy
++          DecayFrameKP4Momentum(1) = DecayFrameDirection(1)*DecayFrameMomentum
++          DecayFrameKP4Momentum(2) = DecayFrameDirection(2)*DecayFrameMomentum
++          DecayFrameKP4Momentum(3) = DecayFrameDirection(3)*DecayFrameMomentum
++
++          !Boost back to nuclear rest frame
++          BoostMomentum = -realParticles(i,j)%momentum(1:3)
++          BoostVelocity = lorentzCalcBeta(BoostMomentum, realParticles(i,j)%mass)
++          NucleonFrameKP4Momentum = DecayFrameKP4Momentum
++          call lorentz(BoostVelocity, NucleonFrameKP4Momentum)
++
++          !Assign particle kinematics
++          finalstate(1)%momentum(0) = NucleonFrameKP4Momentum(0)
++          finalstate(1)%momentum(1) = NucleonFrameKP4Momentum(1)
++          finalstate(1)%momentum(2) = NucleonFrameKP4Momentum(2)
++          finalstate(1)%momentum(3) = NucleonFrameKP4Momentum(3)
++          finalState(1)%position(1) = realParticles(i,j)%position(1)
++          finalState(1)%position(2) = realParticles(i,j)%position(2)
++          finalState(1)%position(3) = realParticles(i,j)%position(3)
++
++          !Remove parent nucleon?
++
++          call setIntoVector(finalState,pertParticles(i:i,:),setFlag)
++
++          call NDKProdInfo_Store(finalState(1)%firstEvent, finalstate(1)%momentum)
++
++          if (.not.setFlag) then
++            write(*,*) 'Problems placing final state K+ into the perturbative particle vector in InitNDKEvents'
++            stop
++          end if
++       end do loopVector
++    end do loopOverEnsemble
++
++  end subroutine InitNDKEvents
++
++
++  integer function GetNEv()
++    NEv=NEv+1
++    GetNEv=NEv
++  end function GetNEv
++
++
++end module InitNDK
+diff --git a/code/inputOutput/EventOutputFile.f90 b/code/inputOutput/EventOutputFile.f90
+index 641ddb2..ee7c3ea 100644
+--- a/code/inputOutput/EventOutputFile.f90
++++ b/code/inputOutput/EventOutputFile.f90
+@@ -340,11 +340,12 @@ contains
+     use EventInfo_HiLep, only: EventInfo_HiLep_Get
+     use neutrinoProdInfo, only: NeutrinoProdInfo_Get
+     use inputGeneral, only: eventType
+-    use eventtypes, only: hiLepton, neutrino, heavyIon, hadron
++    use eventtypes, only: hiLepton, neutrino, heavyIon, hadron, NDK
+     use initHeavyIon, only: b_HI => b
+     use initHadron, only: b_had => b
+     use FreezeoutAnalysis, only: getFreezeoutAnalysis_Pert
+     use PIL_freezeout, only: PIL_freezeout_GET
++    use NDKProdInfo
+ 
+     class(LHOutputFile), intent(in) :: this
+     integer, intent(in), optional :: iFE
+@@ -371,6 +372,11 @@ contains
+       if (.not. present(iFE)) return
+       if (EventInfo_HiLep_Get (0,iFE,Weight,nu,Q2,eps,evtType,phi_Lepton=phiL)) &
+         write(this%iFile,'(A,1P,4e13.4,0P,I8)') '# 14 ', nu, Q2, eps, phiL, evtType
++    case (NDK)
++      if (.not. present(iFE)) return
++      !Hijack momLepIn
++      call NDKProdInfo_Get(iFE,momLepIn)
++      write(this%iFile,'(A,4e13.4)') '# 400 ', momLepIn
+     end select
+ 
+     if (getFreezeoutAnalysis_Pert() .and. present(pNode)) then
