@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 if [[ ! -e BUUInput ]]; then
   ln -s @CMAKE_INSTALL_PREFIX@/GiBUUInstall/BUUInput/src/BUUInput BUUInput
 fi

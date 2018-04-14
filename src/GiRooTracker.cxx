@@ -44,18 +44,24 @@ void GiRooTracker::Reset() {
   Utils::ClearArray2D(StdHepP4);
 }
 
-void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
-                               bool AddProdCharge, bool IsElectronScattering) {
+void GiRooTracker::AddBranches(TTree *&tree, bool AddHistory,
+                               bool AddProdCharge, int EventMode) {
+
+  tree->Branch("EvtNum", &EvtNum, "EvtNum/I");
+  tree->Branch("StdHepN", &StdHepN, "StdHepN/I");
+  tree->Branch("StdHepPdg", StdHepPdg, "StdHepPdg[StdHepN]/I");
+  tree->Branch("StdHepStatus", StdHepStatus, "StdHepStatus[StdHepN]/I");
+  static std::string GiStdHepNPmaxstr = Utils::int2str(kGiStdHepNPmax);
+
+  tree->Branch("StdHepP4", StdHepP4,
+               ("StdHepP4[" + GiStdHepNPmaxstr + "][4]/D").c_str());
+               
+  if (EventMode == 2) {
+    return;
+  }
   tree->Branch("GiBUU2NeutCode", &GiBUU2NeutCode, "GiBUU2NeutCode/I");
   tree->Branch("GiBUUReactionCode", &GiBUUReactionCode, "GiBUUReactionCode/I");
 
-  tree->Branch("EvtNum", &EvtNum, "EvtNum/I");
-
-  tree->Branch("StdHepN", &StdHepN, "StdHepN/I");
-
-  tree->Branch("StdHepPdg", StdHepPdg, "StdHepPdg[StdHepN]/I");
-
-  tree->Branch("StdHepStatus", StdHepStatus, "StdHepStatus[StdHepN]/I");
   tree->Branch("GiBUUPerWeight", &GiBUUPerWeight, "GiBUUPerWeight/D");
   tree->Branch("NumRunsWeight", &NumRunsWeight, "NumRunsWeight/D");
   tree->Branch("FileExtraWeight", &FileExtraWeight, "FileExtraWeight/D");
@@ -74,8 +80,4 @@ void GiRooTracker::AddBranches(TTree*& tree, bool AddHistory,
     tree->Branch("GiBUUPrimaryParticleCharge", &GiBUUPrimaryParticleCharge,
                  "GiBUUPrimaryParticleCharge/I");
   }
-  static std::string GiStdHepNPmaxstr = Utils::int2str(kGiStdHepNPmax);
-
-  tree->Branch("StdHepP4", StdHepP4,
-               ("StdHepP4[" + GiStdHepNPmaxstr + "][4]/D").c_str());
 }

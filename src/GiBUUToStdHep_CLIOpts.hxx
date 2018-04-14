@@ -25,11 +25,16 @@ extern bool IsElectronScattering;
 /// The electron beam energy used.
 extern double EScatteringInputEnergy;
 
+/// Whether GiBUU input is from an NDK (K+ production)  simulation.
+///
+///\note Assumed false.
+extern bool IsNDK;
+
 ///\brief The probe species PDG (neutrino or electron).
 ///
 ///\note Set by
 ///  `GiBUUToStdHep.exe ... -u xx ...'
-/// Required.
+/// Required for IsNDK == false;
 extern std::vector<int> ProbeTypes;
 ///\brief The target nuclei nucleon number, A, for the next input file(s).
 ///

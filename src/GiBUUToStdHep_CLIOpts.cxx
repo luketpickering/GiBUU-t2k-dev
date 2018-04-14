@@ -18,6 +18,7 @@ std::vector<std::string> InpFNames;
 std::string OutFName;
 bool HaveStruckNucleonInfo;
 bool IsElectronScattering = false;
+bool IsNDK = false;
 bool FilesFromSameRun = false;
 double EScatteringInputEnergy;
 std::vector<int> ProbeTypes;
@@ -29,9 +30,9 @@ std::vector<double> NFilesAddedWeights;
 double OverallWeight = 1;
 std::map<int, double> CompositeFluxWeight;
 bool HaveProdChargeInfo = false;
-std::vector<std::pair<std::string, std::string> > FluxFilesToAdd;
+std::vector<std::pair<std::string, std::string>> FluxFilesToAdd;
 bool StrictMode = true;
-}
+} // namespace GiBUUToStdHepOpts
 
 std::vector<std::string> CLIFileArgs;
 
@@ -64,12 +65,11 @@ bool AddFiles(std::string const &OptVal, bool IsCC, int NuType, int TargetA,
     delete cwd;
   } else {
     if (AsteriskPos < lastFSlash) {
-      UDBError(
-          "Currently cannot handle a wildcard in the "
-          "directory structure. Please put input files in the same "
-          "directory or use separate -f arguments (N.B. you will have "
-          "to manually weight each separate file by 1/NFiles). "
-          "Expected -f \"../some/rel/path/*.dat\"");
+      UDBError("Currently cannot handle a wildcard in the "
+               "directory structure. Please put input files in the same "
+               "directory or use separate -f arguments (N.B. you will have "
+               "to manually weight each separate file by 1/NFiles). "
+               "Expected -f \"../some/rel/path/*.dat\"");
       return false;
     }
     dirpath = OptVal.substr(0, lastFSlash + 1);
@@ -154,13 +154,11 @@ bool Handle_InputFile(std::string const &opt) {
       (!GiBUUToStdHepOpts::TargetAs.size()) ||
       (!GiBUUToStdHepOpts::TargetZs.size())) {
     if (GiBUUToStdHepOpts::IsElectronScattering) {
-      UDBError(
-          "-e -a X -z Y must be specified before the "
-          "first input file.");
+      UDBError("-e -a X -z Y must be specified before the "
+               "first input file.");
     } else {
-      UDBError(
-          "-u X -a Y -z Z must be specified before the "
-          "first input file.");
+      UDBError("-u X -a Y -z Z must be specified before the "
+               "first input file.");
     }
     return false;
   }
@@ -214,24 +212,23 @@ bool Handle_nuPDG(std::string const &opt) {
 
   if (GiBUUToStdHepOpts::ProbeTypes.size() >
       GiBUUToStdHepOpts::InpFNames.size()) {
-    UDBError(
-        "Found another -u option before "
-        "the next file has been specified.");
+    UDBError("Found another -u option before "
+             "the next file has been specified.");
     return false;
   }
 
   switch (abs(ival)) {
-    case 12:
-    case 14:
-    case 16:
-      break;
-    case 11:
-      UDBError(
-          "Did you mean to specify -e for electron scattering events instead "
-          "of -u 11?");
-    default:
-      UDBError("Passed neutrino PDG: " << opt << ", expected [12,14,16].");
-      return false;
+  case 12:
+  case 14:
+  case 16:
+    break;
+  case 11:
+    UDBError(
+        "Did you mean to specify -e for electron scattering events instead "
+        "of -u 11?");
+  default:
+    UDBError("Passed neutrino PDG: " << opt << ", expected [12,14,16].");
+    return false;
   }
 
   UDBLog("\t--Assuming next file has Nu PDG: " << ival);
@@ -254,11 +251,17 @@ bool Handle_eScat(std::string const &opt) {
   return true;
 }
 
+bool Handle_NDK(std::string const &opt) {
+  UDBLog("\t--Assuming all files contains NDK events.");
+  GiBUUToStdHepOpts::IsNDK = true;
+  GiBUUToStdHepOpts::ProbeTypes.push_back(321);
+  return true;
+}
+
 bool Handle_IsNC(std::string const &opt) {
   if (GiBUUToStdHepOpts::CCFiles.size() > GiBUUToStdHepOpts::InpFNames.size()) {
-    UDBError(
-        "Found another -N option before "
-        "the next file has been specified.");
+    UDBError("Found another -N option before "
+             "the next file has been specified.");
     return false;
   }
 
@@ -270,9 +273,8 @@ bool Handle_IsNC(std::string const &opt) {
 bool Handle_TargetA(std::string const &opt) {
   if (GiBUUToStdHepOpts::TargetAs.size() >
       GiBUUToStdHepOpts::InpFNames.size()) {
-    UDBError(
-        "Found another -a option before "
-        "the next file has been specified.");
+    UDBError("Found another -a option before "
+             "the next file has been specified.");
     return false;
   }
 
@@ -291,9 +293,8 @@ bool Handle_TargetA(std::string const &opt) {
 bool Handle_TargetZ(std::string const &opt) {
   if (GiBUUToStdHepOpts::TargetZs.size() >
       GiBUUToStdHepOpts::InpFNames.size()) {
-    UDBError(
-        "Found another -z option before "
-        "the next file has been specified.");
+    UDBError("Found another -z option before "
+             "the next file has been specified.");
     return false;
   }
 
@@ -311,9 +312,8 @@ bool Handle_TargetZ(std::string const &opt) {
 bool Handle_FileWeight(std::string const &opt) {
   if (GiBUUToStdHepOpts::FileExtraWeights.size() >
       GiBUUToStdHepOpts::InpFNames.size()) {
-    UDBError(
-        "Found another -W option before "
-        "the next file has been specified.");
+    UDBError("Found another -W option before "
+             "the next file has been specified.");
     return false;
   }
 
@@ -375,26 +375,23 @@ bool Handle_Verbosity(std::string const &opt) {
 
 bool Handle_NoInitialState(std::string const &opt) {
   GiBUUToStdHepOpts::HaveStruckNucleonInfo = false;
-  UDBLog(
-      "\t--Not expecting FinalEvents.dat to contain "
-      "initial state info.");
+  UDBLog("\t--Not expecting FinalEvents.dat to contain "
+         "initial state info.");
   return true;
 }
 
 bool Handle_NoProdCharge(std::string const &opt) {
   GiBUUToStdHepOpts::HaveProdChargeInfo = false;
-  UDBLog(
-      "\t--Not expecting FinalEvents.dat to contain "
-      "neutrino induced resonance charge info.");
+  UDBLog("\t--Not expecting FinalEvents.dat to contain "
+         "neutrino induced resonance charge info.");
   return true;
 }
 
 bool Handle_SaveFluxFile(std::string const &opt) {
   std::vector<std::string> const &split = Utils::SplitStringByDelim(opt, ",");
   if (split.size() != 2) {
-    UDBLog(
-        "[ERROR]: Expected -F argument to look like "
-        "`histname,inputfilename.txt`.");
+    UDBLog("[ERROR]: Expected -F argument to look like "
+           "`histname,inputfilename.txt`.");
     return false;
   }
 
@@ -522,6 +519,18 @@ bool HandleArgs(int const argc, char const *argv[]) {
       requiredArguments |= 2;
       continue;
     }
+    if (("-K" == arg) || ("--NDK" == arg)) {
+      if (GiBUUToStdHepOpts::ProbeTypes.size()) {
+        UDBError(
+            "Already passed a -u option to specify neutrino species, cannot "
+            "also pass -K.");
+        SayRunLike(argv);
+        exit(1);
+      }
+      LastArgOkay = Handle_NDK(opt);
+      requiredArguments |= 2;
+      continue;
+    }
     if (("-N" == arg) || ("--is-NC" == arg)) {
       LastArgOkay = Handle_IsNC(opt);
       continue;
@@ -622,8 +631,7 @@ bool HandleArgs(int const argc, char const *argv[]) {
   }
 
   if (requiredArguments != 15) {
-    std::cout << "[ERROR]: Not all required arguments were found: -u, -a, -z, "
-                 "-f"
+    std::cout << "[ERROR]: Not all required arguments were found: [-u|-e|-K], -a, -z, -f"
               << std::endl;
     return false;
   }
@@ -632,15 +640,6 @@ bool HandleArgs(int const argc, char const *argv[]) {
 void SayRunLike(char const *argv[]) {
   std::cout
       << "[RUNLIKE]: " << argv[0]
-      << "-u <Next file neutrino PDG code> -a <Next file "
-         "target nucleus 'A'> -z <Next file target nucleus 'Z'> [-s] -f <File "
-         "Name> [-h] [-@ Read CLI from specified file] [-c] [-o <File Name "
-         "{default:GiBUURooTracker.root}>] [-N] [-W [i]<Next file target "
-         "weight [1.0/]'W'>] [-R [i]<Overall extra weight [1.0/]'W' -- This is "
-         "most useful for weighting composite targets back to a weight per "
-         "nucleon>] [-v <0-4>{default==0}] [-NI] [-NP] [-F "
-         "[output_hist_name,input_text_flux_file.txt]]"
-
       << "\n-----------------------------------\n"
 
       << "\n\t[Arg]: (-h|-?|--help)"
@@ -659,6 +658,8 @@ void SayRunLike(char const *argv[]) {
          "-e]"
       << "\n\t[Arg]: (-e|--e-scattering) all files contain electron scattering "
          "events"
+      << "\n\t[Arg]: (-K|--NDK) all files contain nucleon decay (GiBUU mode "
+         "400) events"
       << "\n\t[Arg]: (-N|--is-NC)"
       << "\n\t[Arg]: (-a|--target-a) <Next file target nucleus 'A'> [Required]"
       << "\n\t[Arg]: (-z|--target-z) <Next file target nucleus 'Z'> [Required]"
@@ -674,4 +675,4 @@ void SayRunLike(char const *argv[]) {
          "[output_hist_name,input_text_flux_file.txt]"
       << std::endl;
 }
-}
+} // namespace GiBUUToStdHep_CLIOpts

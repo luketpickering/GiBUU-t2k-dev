@@ -119,7 +119,12 @@ struct GiRooTracker {
   void Reset();
 
   ///\brief Will add the relevant output branches to a given TTree.
+  ///
+  /// EventMode:
+  /// 0: Neutrino
+  /// 1: Electron
+  /// 2: NDK
   void AddBranches(TTree*& tree, bool AddHistory = false,
-                   bool AddProdCharge = false, bool IsElectronScattering=false);
+                   bool AddProdCharge = false, int EventMode=0);
 };
 #endif

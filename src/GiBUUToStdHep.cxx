@@ -37,10 +37,10 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
   std::vector<std::string> splitLine = Utils::SplitStringByDelim(line, " ");
   if (splitLine.size() !=
       (15 +
-       size_t(GiBUUToStdHepOpts::HaveProdChargeInfo))) {  // try to fix known
-                                                          // parsing error
+       size_t(GiBUUToStdHepOpts::HaveProdChargeInfo))) { // try to fix known
+                                                         // parsing error
     std::string ln =
-        Utils::Replace(line, "E-", "XXXXX");  // Guard any exponential notation
+        Utils::Replace(line, "E-", "XXXXX"); // Guard any exponential notation
     ln = Utils::Replace(ln, "-", " -");
     ln = Utils::Replace(ln, "XXXXX", "E-");
 
@@ -83,7 +83,7 @@ GiBUUPartBlob GetParticleLine(std::string const &line) {
 
 size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
                          size_t fileNumber, size_t NRunsInFile,
-                         std::vector<std::vector<GiBUUPartBlob> > &Events) {
+                         std::vector<std::vector<GiBUUPartBlob>> &Events) {
   size_t NumEvs = 0;
 
   double NRunsScaleFactor =
@@ -103,7 +103,7 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
 
     int const &EvNum = ev.front().EvNum;
 
-    if (!EvNum) {  // Malformed line
+    if (!EvNum) { // Malformed line
       UDBWarn("Skipping event due to malformed line.");
       continue;
     }
@@ -114,40 +114,44 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
 
     giRooTracker->EvtNum = EvNum;
 
-    // neutrino
-    giRooTracker->StdHepPdg[0] = FileNuType;
+    if (!GiBUUToStdHepOpts::IsNDK) {
+      // neutrino
+      giRooTracker->StdHepPdg[0] = FileNuType;
 
-    giRooTracker->StdHepStatus[0] = 0;
-    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
-    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
-    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] =
-        GiBUUToStdHepOpts::IsElectronScattering
-            ? sqrt(ev.front().EProbe * ev.front().EProbe -
-                   511 * PhysConst::KeV * 511 * PhysConst::KeV)
-            : ev.front().EProbe;
-    giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().EProbe;
+      giRooTracker->StdHepStatus[0] = 0;
+      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx] = 0;
+      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy] = 0;
+      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz] =
+          GiBUUToStdHepOpts::IsElectronScattering
+              ? sqrt(ev.front().EProbe * ev.front().EProbe -
+                     511 * PhysConst::KeV * 511 * PhysConst::KeV)
+              : ev.front().EProbe;
+      giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE] = ev.front().EProbe;
 
-    if (GiBUUToStdHepOpts::EScatteringInputEnergy = 0xdeadbeef) {
-      GiBUUToStdHepOpts::EScatteringInputEnergy = ev.front().EProbe;
-    } else if (fabs(GiBUUToStdHepOpts::EScatteringInputEnergy -
-                    ev.front().EProbe) > 1E-5) {
-      UDBError("Read a differing input energy: First event: "
-               << GiBUUToStdHepOpts::EScatteringInputEnergy << ", event "
-               << EvNum << " in file \""
-               << GiBUUToStdHepOpts::InpFNames[fileNumber] << "\" had "
-               << ev.front().EProbe);
-      throw;
+      if (GiBUUToStdHepOpts::EScatteringInputEnergy = 0xdeadbeef) {
+        GiBUUToStdHepOpts::EScatteringInputEnergy = ev.front().EProbe;
+      } else if (fabs(GiBUUToStdHepOpts::EScatteringInputEnergy -
+                      ev.front().EProbe) > 1E-5) {
+        UDBError("Read a differing input energy: First event: "
+                 << GiBUUToStdHepOpts::EScatteringInputEnergy << ", event "
+                 << EvNum << " in file \""
+                 << GiBUUToStdHepOpts::InpFNames[fileNumber] << "\" had "
+                 << ev.front().EProbe);
+        throw;
+      }
     }
+    size_t targetIdx = GiBUUToStdHepOpts::IsNDK ? 0 : 1;
 
     // target
-    giRooTracker->StdHepPdg[1] =
+    giRooTracker->StdHepPdg[targetIdx] =
         Utils::MakeNuclearPDG(FileTargetZ, FileTargetA);
-    giRooTracker->StdHepStatus[1] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz] = 0;
-    giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE] = FileTargetA;
+    giRooTracker->StdHepStatus[targetIdx] = 0;
+    giRooTracker->StdHepP4[targetIdx][GiRooTracker::kStdHepIdxPx] = 0;
+    giRooTracker->StdHepP4[targetIdx][GiRooTracker::kStdHepIdxPy] = 0;
+    giRooTracker->StdHepP4[targetIdx][GiRooTracker::kStdHepIdxPz] = 0;
+    giRooTracker->StdHepP4[targetIdx][GiRooTracker::kStdHepIdxE] = FileTargetA;
 
+    // event meta-data
     giRooTracker->GiBUUReactionCode = ev.front().Prodid;
     if (GiBUUToStdHepOpts::HaveProdChargeInfo) {
       giRooTracker->GiBUUPrimaryParticleCharge = ev.front().ProdCharge;
@@ -160,31 +164,40 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
 
     if (FluxHists.count(FileNuType)) {
       SigmaHists[FileNuType]->Fill(ev.front().EProbe, giRooTracker->EvtWght);
-      EvHists[FileNuType]->Fill(
-          ev.front().EProbe,
-          giRooTracker->EvtWght * FluxComponentIntegrals[FileNuType]);
+      EvHists[FileNuType]->Fill(ev.front().EProbe,
+                                giRooTracker->EvtWght *
+                                    FluxComponentIntegrals[FileNuType]);
     }
     if (FileNuType == DomPDG) {
       DomEvt->Fill(ev.front().EProbe, giRooTracker->EvtWght * DomFCI);
     }
 
-    giRooTracker->StdHepN = 2;
+    giRooTracker->StdHepN = GiBUUToStdHepOpts::IsNDK ? 1 : 2;
 
     bool BadEv = false;
     for (size_t p_it = 0; p_it < ev.size(); ++p_it) {
       GiBUUPartBlob const &part = ev[p_it];
-      if (!part.EvNum) {  // Malformed line
+      if (!part.EvNum) { // Malformed line
         UDBWarn("Skipping event due to malformed line.");
         BadEv = true;
         break;
       }
 
-      if (GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
-          (giRooTracker->StdHepN == 3)) {
-        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
+      if (GiBUUToStdHepOpts::IsNDK) {
+        if (p_it == 0) { // Pre-FSI Kaon information
+          giRooTracker->StdHepStatus[giRooTracker->StdHepN] =
+              14; // GENIE hadron in the nucleus convention.
+        } else {
+          giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1; // All other FS
+        }
       } else {
-        giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1;  // All other FS
-      }  // should be good.
+        if (GiBUUToStdHepOpts::HaveStruckNucleonInfo &&
+            (giRooTracker->StdHepN == 3)) {
+          giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 11;
+        } else {
+          giRooTracker->StdHepStatus[giRooTracker->StdHepN] = 1; // All other FS
+        } // should be good.
+      }
 
       // Particles read from LH files are already in PDG format
       giRooTracker->StdHepPdg[giRooTracker->StdHepN] =
@@ -200,12 +213,15 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
         giRooTracker->StdHepPdg[giRooTracker->StdHepN] = 0;
       }
 
-      giRooTracker->StdHepP4[giRooTracker->StdHepN]
-                            [GiRooTracker::kStdHepIdxPx] = part.FourMom.X();
-      giRooTracker->StdHepP4[giRooTracker->StdHepN]
-                            [GiRooTracker::kStdHepIdxPy] = part.FourMom.Y();
-      giRooTracker->StdHepP4[giRooTracker->StdHepN]
-                            [GiRooTracker::kStdHepIdxPz] = part.FourMom.Z();
+      giRooTracker
+          ->StdHepP4[giRooTracker->StdHepN][GiRooTracker::kStdHepIdxPx] =
+          part.FourMom.X();
+      giRooTracker
+          ->StdHepP4[giRooTracker->StdHepN][GiRooTracker::kStdHepIdxPy] =
+          part.FourMom.Y();
+      giRooTracker
+          ->StdHepP4[giRooTracker->StdHepN][GiRooTracker::kStdHepIdxPz] =
+          part.FourMom.Z();
       giRooTracker->StdHepP4[giRooTracker->StdHepN][GiRooTracker::kStdHepIdxE] =
           part.FourMom.E();
 
@@ -214,8 +230,8 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
       auto const &hDec = GiBUUUtils::DecomposeGiBUUHistory(part.History);
       giRooTracker->GiBHepGeneration[giRooTracker->StdHepN] = std::get<0>(hDec);
 
-      if (std::get<1>(hDec) == -1) {  // If this was produced by a 3 body
-                                      // process
+      if (std::get<1>(hDec) == -1) { // If this was produced by a 3 body
+                                     // process
         giRooTracker->GiBHepMother[giRooTracker->StdHepN] = std::get<1>(hDec);
         giRooTracker->GiBHepFather[giRooTracker->StdHepN] = std::get<2>(hDec);
       } else {
@@ -239,13 +255,13 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
 
     if (BadEv) {
       continue;
-    }  // If we broke then don't bother continuing
-       // processing.
+    } // If we broke then don't bother continuing
+      // processing.
 
     if (GiBUUToStdHepOpts::IsElectronScattering) {
       giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode_escat(
           giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg);
-    } else {
+    } else if (!GiBUUToStdHepOpts::IsNDK) {
       try {
         giRooTracker->GiBUU2NeutCode = GiBUUUtils::GiBUU2NeutReacCode(
             giRooTracker->GiBUUReactionCode, giRooTracker->StdHepPdg,
@@ -270,65 +286,84 @@ size_t FlushEventsToDisk(TTree *OutputTree, GiRooTracker *giRooTracker,
     }
 
     if (UDBDebugging::GetInfoLevel() > 2) {
-      UDBInfo(
-          "EvNo: " << EvNum << ", contained " << giRooTracker->StdHepN << " ("
-                   << ev.size() << ") particles. "
-                                   "Event Weight: "
-                   << std::setprecision(3) << giRooTracker->GiBUUPerWeight
-                   << "\n\tGiBUUReactionCode: "
-                   << giRooTracker->GiBUUReactionCode
-                   << ", NeutConventionReactionCode: "
-                   << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
-                   << TLorentzVector(
-                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
-                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
-                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
-                          giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE])
-                   << " (" << giRooTracker->StdHepPdg[0] << ")");
-      UDBInfo("\t[Target] : " << giRooTracker->StdHepPdg[1]);
-      if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
-        UDBInfo("\t[Nuc In] : "
+      if (!GiBUUToStdHepOpts::IsNDK) {
+        UDBInfo("EvNo: "
+                << EvNum << ", contained " << giRooTracker->StdHepN << " ("
+                << ev.size()
+                << ") particles. "
+                   "Event Weight: "
+                << std::setprecision(3) << giRooTracker->GiBUUPerWeight
+                << "\n\tGiBUUReactionCode: " << giRooTracker->GiBUUReactionCode
+                << ", NeutConventionReactionCode: "
+                << giRooTracker->GiBUU2NeutCode << "\n\t[Lep In] : "
                 << TLorentzVector(
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
-                       giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
-                << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")");
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPx],
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPy],
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxPz],
+                       giRooTracker->StdHepP4[0][GiRooTracker::kStdHepIdxE])
+                << " (" << giRooTracker->StdHepPdg[0] << ")");
+        UDBInfo("\t[Target] : " << giRooTracker->StdHepPdg[1]);
+        if (GiBUUToStdHepOpts::HaveStruckNucleonInfo) {
+          UDBInfo("\t[Nuc In] : "
+                  << TLorentzVector(
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPx],
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPy],
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxPz],
+                         giRooTracker->StdHepP4[3][GiRooTracker::kStdHepIdxE])
+                  << " (" << std::setw(4) << giRooTracker->StdHepPdg[3] << ")");
+        }
+      } else {
+        UDBInfo("EvNo: "
+                << EvNum << ", contained " << giRooTracker->StdHepN << " ("
+                << ev.size() << ") particles. "
+                << "\n\t[Init NDK particle] : "
+                << TLorentzVector(
+                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPx],
+                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPy],
+                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxPz],
+                       giRooTracker->StdHepP4[1][GiRooTracker::kStdHepIdxE])
+                << " (" << giRooTracker->StdHepPdg[1] << ")");
+        UDBInfo("\t[Target] : " << giRooTracker->StdHepPdg[0]);
       }
 
       // We have already printed the struck nucleon
-      Int_t StartPoint = ((!GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : 4);
+      Int_t StartPoint =
+          GiBUUToStdHepOpts::IsNDK
+              ? 2
+              : ((!GiBUUToStdHepOpts::HaveStruckNucleonInfo) ? 3 : 4);
       for (Int_t stdHepInd = StartPoint; stdHepInd < giRooTracker->StdHepN;
            ++stdHepInd) {
-        UDBInfo("\t[" << std::setw(2) << (stdHepInd - (StartPoint)) << "]("
-                      << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd]
-                      << ")"
-                      << TLorentzVector(
-                             giRooTracker->StdHepP4[stdHepInd]
-                                                   [GiRooTracker::kStdHepIdxPx],
-                             giRooTracker->StdHepP4[stdHepInd]
-                                                   [GiRooTracker::kStdHepIdxPy],
-                             giRooTracker->StdHepP4[stdHepInd]
-                                                   [GiRooTracker::kStdHepIdxPz],
-                             giRooTracker->StdHepP4[stdHepInd]
-                                                   [GiRooTracker::kStdHepIdxE])
+        UDBInfo(
+            "\t["
+            << std::setw(2) << (stdHepInd - (StartPoint)) << "]("
+            << std::setw(5) << giRooTracker->StdHepPdg[stdHepInd] << ")"
+            << TLorentzVector(
+                   giRooTracker
+                       ->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPx],
+                   giRooTracker
+                       ->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPy],
+                   giRooTracker
+                       ->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxPz],
+                   giRooTracker->StdHepP4[stdHepInd][GiRooTracker::kStdHepIdxE])
 #ifndef CPP03COMPAT
-                      << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")"
+            << " (H:" << giRooTracker->GiBHepHistory[stdHepInd] << ")"
 #endif
 
-                );
+        );
 #ifndef CPP03COMPAT
         UDBInfo("\t\t" << GiBUUUtils::WriteGiBUUHistory(
                     giRooTracker->GiBHepHistory[stdHepInd]));
 #endif
       }
-      UDBInfo("\t[Lep Out]: "
-              << TLorentzVector(
-                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
-                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
-                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
-                     giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
-              << " (" << giRooTracker->StdHepPdg[2] << ")" << std::endl);
+      if (!GiBUUToStdHepOpts::IsNDK) {
+        UDBInfo("\t[Lep Out]: "
+                << TLorentzVector(
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPx],
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPy],
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxPz],
+                       giRooTracker->StdHepP4[2][GiRooTracker::kStdHepIdxE])
+                << " (" << giRooTracker->StdHepPdg[2] << ")" << std::endl);
+      }
     }
     OutputTree->Fill();
     NumEvs++;
@@ -360,7 +395,7 @@ std::string GetLastLine(std::ifstream &in) {
 }
 
 int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
-  std::vector<std::vector<GiBUUPartBlob> > FileEvents;
+  std::vector<std::vector<GiBUUPartBlob>> FileEvents;
   // http://www2.research.att.com/~bs/bs_faq2.html
   // People sometimes worry about the cost of std::vector growing incrementally.
   // I used to worry about that and used reserve() to optimize the growth.
@@ -395,20 +430,25 @@ int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
       do {
         std::vector<GiBUUPartBlob> ev = lhevr.ReadEvent();
         if ((NParts = ev.size())) {
-          // Have to force known FSLepton information
-          int FSLeptonPDG = 0;
-          if (GiBUUToStdHepOpts::IsElectronScattering) {
-            FSLeptonPDG = 11;
-          } else {
-            bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fileNumber];
-            int FileNuType = GiBUUToStdHepOpts::ProbeTypes[fileNumber];
-            if (FileIsCC) {
-              FSLeptonPDG = FileNuType + ((FileNuType < 0) ? +1 : -1);
-            } else {  // NC event
-              FSLeptonPDG = FileNuType;
+          if (!GiBUUToStdHepOpts::IsNDK) {
+            // Have to force known FSLepton information
+            int FSLeptonPDG = 0;
+            if (GiBUUToStdHepOpts::IsElectronScattering) {
+              FSLeptonPDG = 11;
+            } else {
+              bool FileIsCC = GiBUUToStdHepOpts::CCFiles[fileNumber];
+              int FileNuType = GiBUUToStdHepOpts::ProbeTypes[fileNumber];
+              if (FileIsCC) {
+                FSLeptonPDG = FileNuType + ((FileNuType < 0) ? +1 : -1);
+              } else { // NC event
+                FSLeptonPDG = FileNuType;
+              }
             }
+            ev.front().ID = FSLeptonPDG;
+          } else {
+            int FileNuType = 0;
+            ev.front().ID = 321;
           }
-          ev.front().ID = FSLeptonPDG;
           FileEvents.push_back(ev);
         }
 
@@ -427,7 +467,13 @@ int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
       GiBUUToStdHepOpts::HaveStruckNucleonInfo = holder_SNI;
       GiBUUToStdHepOpts::HaveProdChargeInfo = holder_PCI;
 
-    } else {
+    } else { // FinalEvents.dat
+      if (GiBUUToStdHepOpts::IsNDK) {
+        std::cout << "[ERROR]: Can currently only read NDK events from Les "
+                     "Houches file format."
+                  << std::endl;
+        return 1;
+      }
       std::ifstream ifs(fname.c_str());
 
       if (!ifs.good()) {
@@ -452,7 +498,7 @@ int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
       while (std::getline(ifs, line)) {
         UDBVerbose("[LINE:" << LineNum << "]: " << line);
 
-        if (line[0] == '#') {  // Skip comments
+        if (line[0] == '#') { // Skip comments
           continue;
           LineNum++;
         }
@@ -460,10 +506,9 @@ int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
 
         if ((part.PerWeight == 0) &&
             (!GiBUUToStdHepOpts::HaveStruckNucleonInfo)) {
-          UDBWarn(
-              "Found particle with 0 weight, but do not have "
-              "initial state information enabled (-v -1 to silence this "
-              "message).");
+          UDBWarn("Found particle with 0 weight, but do not have "
+                  "initial state information enabled (-v -1 to silence this "
+                  "message).");
         }
 
         if ((part.EvNum != int(LastEvNum)) && LastEvNum) {
@@ -495,7 +540,7 @@ int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
                                         NRunsInFile, FileEvents);
       }
 
-      ifs.close();  // Read all the lines.
+      ifs.close(); // Read all the lines.
     }
     UDBLog("Found " << NEvsInFile << " events in " << fname << ".");
 
@@ -509,31 +554,35 @@ int ParseACSIIEventVectors(TTree *OutputTree, GiRooTracker *giRooTracker) {
 
   UDBInfo("Saved " << NumEvs << " events.");
 
-  for (std::map<int, TH1D *>::iterator h_it = SigmaHists.begin();
-       h_it != SigmaHists.end(); ++h_it) {
-    for (int bi_it = 1; bi_it < h_it->second->GetXaxis()->GetNbins() + 1;
-         ++bi_it) {
-      double ENuBWidth = FluxHists[h_it->first]->GetXaxis()->GetBinWidth(bi_it);
-      double NNu = FluxHists[h_it->first]->GetBinContent(bi_it) * ENuBWidth;
-      if (NNu < std::numeric_limits<double>::min()) {
-        continue;
+  if (!GiBUUToStdHepOpts::IsNDK) {
+    for (std::map<int, TH1D *>::iterator h_it = SigmaHists.begin();
+         h_it != SigmaHists.end(); ++h_it) {
+      for (int bi_it = 1; bi_it < h_it->second->GetXaxis()->GetNbins() + 1;
+           ++bi_it) {
+        double ENuBWidth =
+            FluxHists[h_it->first]->GetXaxis()->GetBinWidth(bi_it);
+        double NNu = FluxHists[h_it->first]->GetBinContent(bi_it) * ENuBWidth;
+        if (NNu < std::numeric_limits<double>::min()) {
+          continue;
+        }
+        h_it->second->SetBinContent(bi_it,
+                                    h_it->second->GetBinContent(bi_it) / NNu);
+        h_it->second->SetBinError(bi_it,
+                                  h_it->second->GetBinError(bi_it) / NNu);
       }
-      h_it->second->SetBinContent(bi_it,
-                                  h_it->second->GetBinContent(bi_it) / NNu);
-      h_it->second->SetBinError(bi_it, h_it->second->GetBinError(bi_it) / NNu);
-    }
 
-    EvHists[h_it->first]->Scale(1, "width");
-    EvHists[h_it->first]->Scale(NumEvs);
-  }
-  if (DomEvt) {
-    DomEvt->Scale(1, "width");
-    DomEvt->Write("evt_per_NEvents");
-    std::string name = DomEvt->GetName();
-    std::string title = DomEvt->GetTitle();
-    DomEvt = static_cast<TH1D *>(FluxHists[DomPDG]->Clone());
-    DomEvt->SetNameTitle(name.c_str(), title.c_str());
-    DomEvt->Scale(NumEvs);
+      EvHists[h_it->first]->Scale(1, "width");
+      EvHists[h_it->first]->Scale(NumEvs);
+    }
+    if (DomEvt) {
+      DomEvt->Scale(1, "width");
+      DomEvt->Write("evt_per_NEvents");
+      std::string name = DomEvt->GetName();
+      std::string title = DomEvt->GetTitle();
+      DomEvt = static_cast<TH1D *>(FluxHists[DomPDG]->Clone());
+      DomEvt->SetNameTitle(name.c_str(), title.c_str());
+      DomEvt->Scale(NumEvs);
+    }
   }
 
   return 0;
@@ -596,9 +645,10 @@ std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
     fi = Utils::str2d(IntegString, true);
   } catch (std::exception const &e) {
     UDBWarn("Input flux file integral comment (\""
-            << IntegString << "\") could not be parsed for the "
-                              "flux species "
-                              "associated with \""
+            << IntegString
+            << "\") could not be parsed for the "
+               "flux species "
+               "associated with \""
             << histname << "\".");
     UDBWarn("From flux line: " << fln);
     UDBWarn("Parsing exception: " << e.what());
@@ -616,11 +666,13 @@ std::pair<double, double> HandleFluxIntegralLine(std::string const &fln,
     fci = Utils::str2d(IntegString, true);
   } catch (std::exception const &e) {
     UDBWarn("Input flux file width integral comment (\""
-            << IntegString << "\") could not be parsed for the "
-                              "flux species "
-                              "associated with \""
-            << histname << "\", it will not be correctly normalisable in a "
-                           "multi-species sample.");
+            << IntegString
+            << "\") could not be parsed for the "
+               "flux species "
+               "associated with \""
+            << histname
+            << "\", it will not be correctly normalisable in a "
+               "multi-species sample.");
     UDBWarn("From flux line: " << fln);
     UDBWarn("Parsing exception: " << e.what());
     return std::pair<double, double>(0, 0);
@@ -654,10 +706,10 @@ void SaveFluxFile(std::string const &fileloc, std::string const &histname) {
   }
 
   size_t ln = 0;
-  std::vector<std::pair<double, double> > FluxValues;
+  std::vector<std::pair<double, double>> FluxValues;
   std::pair<double, double> FluxIntegrals(0, 0);
   while (std::getline(ifs, line)) {
-    if (line[0] == '#') {  // ignore comments
+    if (line[0] == '#') { // ignore comments
       if (ln == 0) {
         FluxIntegrals = HandleFluxIntegralLine(line, histname, pdgfromhistname);
       }
@@ -736,9 +788,15 @@ int GiBUUToStdHep() {
 
   TTree *rooTrackerTree = new TTree("giRooTracker", "GiBUU StdHepVariables");
   GiRooTracker *giRooTracker = new GiRooTracker();
+  int EventMode = 0;
+  if(GiBUUToStdHepOpts::IsElectronScattering){
+    EventMode = 1;
+  } else if(GiBUUToStdHepOpts::IsNDK){
+    EventMode = 2;
+  }
   giRooTracker->AddBranches(rooTrackerTree, true,
                             GiBUUToStdHepOpts::HaveProdChargeInfo,
-                            GiBUUToStdHepOpts::IsElectronScattering);
+                            EventMode);
 
   // Handle the fluxes first so that we know the relative normalisations
   for (size_t ff_it = 0; ff_it < GiBUUToStdHepOpts::FluxFilesToAdd.size();
